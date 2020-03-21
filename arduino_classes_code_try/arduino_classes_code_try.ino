@@ -10,7 +10,7 @@
 using namespace std;
 
 DHT dht(7, DHT11);
-
+  
 class PinControl{
   public:
     int pin;

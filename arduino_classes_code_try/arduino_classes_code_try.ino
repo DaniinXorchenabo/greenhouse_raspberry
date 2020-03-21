@@ -312,9 +312,9 @@ class RaspberryPiControl{
     }
     
     void test(){
-      Serial.print("test----");
-      Serial.println(digit_pins->find("poliv")->second.pin);
-      digit_pins->find("poliv")->second.turn_on_for_time(10000);
+      Serial.println("---");
+      Serial.println(digit_pins->find("test")->second.pin);
+      digit_pins->find("test")->second.turn_on_for_time(10000);
     }
     
   private:
@@ -333,6 +333,7 @@ class RaspberryPiControl{
       }
       return -1.0;
     }
+    
     /*
     PinControl get_digitPin_obj(String key){
       if (digit_pins->find(key) != digit_pins->end()){
@@ -363,6 +364,7 @@ class RaspberryPiControl{
       }
       return ret;
     }
+
 };
 
 
@@ -388,7 +390,7 @@ Serial.println("rtrtr");
   //dig_pins["vapor"] = PinControl(12);
   //dig_pins["fan_vapor"] = PinControl(26);
   dig_pins["test"] = PinControl(13, LOW);
-  dig_pins["test"].turn_on_for_time(10000);
+  //dig_pins["test"].turn_on_for_time(10000);
 
 /*
   if (dig_pins.find("test") != dig_pins.end()){
@@ -406,6 +408,8 @@ Serial.println("rtrtr");
   //sensors_val["temper"] = (sens_val_strucr){23, AnalogReadPin(dht, "t")};
   
   //sensors_val["humid"].cls.test();
+  Serial.println("rtrtr ");
+  rasClass.test();
   Serial.println("rtrtr ");
   //Serial.println(dig_pins["test"].pin);
   //dig_pins["test"].turn_on_for_time(3000);

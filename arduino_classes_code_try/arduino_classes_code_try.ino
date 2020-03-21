@@ -265,13 +265,13 @@ std::map <String, sens_val_strucr> sensors_val;
 class RaspberryPiControl{
   public:
     SoftwareSerial *raspb;
-    std::map <String, sens_val_strucr> * sensors = NULL; //проверить, что тут: локальные копии или ссылки
-    std::map <String, PinControl> * digit_pins = NULL;
+    //std::map <String, sens_val_strucr> * sensors = NULL; //проверить, что тут: локальные копии или ссылки
+    //std::map <String, PinControl> * digit_pins = NULL;
 
-    RaspberryPiControl(SoftwareSerial &ras, std::map <String, sens_val_strucr> * sensors_new, std::map <String, PinControl> * pins_new){
+    RaspberryPiControl(SoftwareSerial &ras){ //, std::map <String, sens_val_strucr> * sensors_new, std::map <String, PinControl> * pins_new
       raspb = &ras;
-      sensors = sensors_new;
-      digit_pins = pins_new;
+      //sensors = sensors_new;
+      //digit_pins = pins_new;
       //pins_new["whiteLed"].edit_status_pin(true);
       raspb->begin(9600);
     }
@@ -291,18 +291,18 @@ class RaspberryPiControl{
       write_raspb("I get: " + str);
       str_raspb = str;
       if (str == "WhiteLedHIGH"){ 
-        if (digit_pins->find("whiteLed") != digit_pins->end()){
-          digit_pins->find("whiteLed")->second.edit_status_pin(true);
+        if (dig_pins.find("whiteLed") != dig_pins.end()){
+          dig_pins.find("whiteLed")->second.edit_status_pin(true);
         }
       }
       else if (str == "WhiteLedLOW"){
-        if (digit_pins->find("whiteLed") != digit_pins->end()){
-          digit_pins->find("whiteLed")->second.edit_status_pin(false);
+        if (dig_pins.find("whiteLed") != dig_pins.end()){
+          dig_pins.find("whiteLed")->second.edit_status_pin(false);
         }
       }
       else if (str == "polivHIGH"){
-        if (digit_pins->find("poliv") != digit_pins->end()){
-          digit_pins->find("poliv")->second.turn_on_for_time(3000);
+        if (dig_pins.find("poliv") != dig_pins.end()){
+          dig_pins.find("poliv")->second.turn_on_for_time(3000);
           //get_digitPin_obj("poliv")->turn_on_for_time(3000);
         }
       }
@@ -313,8 +313,9 @@ class RaspberryPiControl{
     
     void test(){
       Serial.println("---");
-      Serial.println(digit_pins->find("test")->second.pin);
-      digit_pins->find("test")->second.turn_on_for_time(10000);
+      //Serial.println(digit_pins->find("test")->second.pin);
+      //digit_pins->find("test")->second.turn_on_for_time(10000);
+      sensors_val["gas"].value = 137.0;
     }
     
   private:
@@ -322,14 +323,14 @@ class RaspberryPiControl{
     String str_raspb = "";
 
     void set_value_for_sensor_struct(String key, float value){
-      if (sensors->find(key) !=sensors->end()){
-        sensors->find(key)->second.value = 68;
+      if (sensors_val.find(key) !=sensors_val.end()){
+        sensors_val.find(key)->second.value = 68;
       }
     }
     
     float get_value_for_sensor_struct(String key){
-      if (sensors->find(key) !=sensors->end()){
-        return sensors->find(key)->second.value;
+      if (sensors_val.find(key) !=sensors_val.end()){
+        return sensors_val.find(key)->second.value;
       }
       return -1.0;
     }
@@ -371,7 +372,7 @@ class RaspberryPiControl{
 
 
 SoftwareSerial raspb(52, 50);
-RaspberryPiControl rasClass(raspb, &sensors_val, &dig_pins);
+RaspberryPiControl rasClass(raspb);
 
 void setup(){
   dht.begin();
@@ -392,51 +393,21 @@ Serial.println("rtrtr");
   dig_pins["test"] = PinControl(13, LOW);
   //dig_pins["test"].turn_on_for_time(10000);
 
-/*
-  if (dig_pins.find("test") != dig_pins.end()){
-    Serial.println("-=-=-=-=-=-=-");
-  }
-    if (dig_pins.find("test00000") != dig_pins.end()){
-    Serial.println("-=-=-=-=-=-=- 333");
-  }
-  */
-  //sensors_val["poliv_levle"] = (sens_val_strucr){700, AnalogReadPin(0)};
+
   sensors_val["gas"] = (sens_val_strucr){88, AnalogReadPin(1)};
-  
-  //sensors_val["vapor_levle"] = (sens_val_strucr){700, AnalogReadPin(2)};
-  //sensors_val["humid"] = {69, AnalogReadPin(dht, "h")};
-  //sensors_val["temper"] = (sens_val_strucr){23, AnalogReadPin(dht, "t")};
-  
-  //sensors_val["humid"].cls.test();
   Serial.println("rtrtr ");
   rasClass.test();
   Serial.println("rtrtr ");
-  //Serial.println(dig_pins["test"].pin);
-  //dig_pins["test"].turn_on_for_time(3000);
-  //Serial.println(*rasClass.sensors["gas"].value);
-  /*Serial.println(sensors_val["gas"].value);
-  Serial.println(rasClass.sensors["gas"].value);
-  
-  rasClass.for_debug(sensors_val);
-  Serial.println(rasClass.sensors["gas"].value);
   Serial.println(sensors_val["gas"].value);
-  */
+
 }
 
 void loop(){
   update_pin();
+  rasClass.raspb_update();
+  //update_sensors_value();
   delay(500);
   Serial.println("looping.....");
-  /*
-  update_sensors_value();
-  Serial.println(sensors_val["gas"].value);
-  Serial.println(sensors_val["poliv_levle"].value);
-  Serial.println(sensors_val["vapor_levle"].value);
-  */
-  //Serial.println(dht.readTemperature());
-  //Serial.println();
-
-  delay(1000);  
 }
 
 void update_pin(){

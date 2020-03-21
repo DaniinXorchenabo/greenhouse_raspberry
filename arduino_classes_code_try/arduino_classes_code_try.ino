@@ -137,15 +137,15 @@ class PinControl{
 
     void PWM_mode(int filling){
       analog_write_pin(filling);
-
-
-
     }
 
     void set_priority(int now_priority){
       priority = now_priority;
     }
-  
+
+    int get_priority(){
+      return priority;
+    }
   private:
     unsigned long time_turn_on;
     bool is_work_for_time = false;
@@ -368,7 +368,68 @@ class RaspberryPiControl{
 
 };
 
+class EspControl{
+  public:
+  
+    EspControl(){}
 
+    void _update () {
+      over_read();
+    }
+
+    void over_read(){
+      String new_str = esp_read();
+      if (new_str != ""){
+        data_processing(new_str);
+      }
+    }
+
+    void data_processing(String priem_c_ESP_str){
+
+      if (priem_c_ESP_str == "3") {//свет включить
+        if (dig_pins.find("fitoLed") != dig_pins.end()){
+          dig_pins["fitoLed"].edit_status_pin(true, 50, true);
+        }
+      }
+      if (priem_c_ESP_str == "2") {//свет выключить
+        if (dig_pins.find("fitoLed") != dig_pins.end()){
+          dig_pins["fitoLed"].edit_status_pin(false, 50, true);
+        }
+      }
+      if (priem_c_ESP_str == "7") {/*digitalWrite(40,HIGH);   reset_esp = 1;*/} //resrt
+      if (priem_c_ESP_str == "4") {  //полив
+        if (dig_pins.find("poliv") != dig_pins.end()){
+          dig_pins["poliv"].turn_on_for_time(3000, 50);
+        }
+      } 
+      if (priem_c_ESP_str == "5") {} //включить авто
+      if ((priem_c_ESP_str == "6")) {reset_priority();} //выключить авто
+    }
+    
+  private:
+    String esp_string = "";
+    
+    String esp_read(){
+      /*
+      if (Serial3.available()){
+        return Serial3.readString();
+      }
+      return "";*/
+    }
+
+    void esp_write(String send_data){
+      //Serial3.println(send_data);
+    }
+
+    void reset_priority(){
+      for(auto it = dig_pins.begin(); it != dig_pins.end(); ++it){
+        int prt = it->second.get_priority();
+        if (prt >= 50 && prt < 100){
+          it->second.set_priority(prt - 50);
+        }
+      }
+    }
+};
 
 
 SoftwareSerial raspb(52, 50);

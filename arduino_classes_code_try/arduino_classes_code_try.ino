@@ -146,6 +146,11 @@ class PinControl{
     int get_priority(){
       return priority;
     }
+    
+    int get_filling_pin(){
+      return pin_filling
+    }
+    
   private:
     unsigned long time_turn_on;
     bool is_work_for_time = false;
@@ -190,7 +195,7 @@ class PinControl{
     void analog_write_pin(int filling){
       if (pin_filling != filling){
         pin_filling = filling;
-        analogWrite(pin, filling);
+        analogWrite(pin, pin_filling);
       }
     }
 
@@ -372,10 +377,47 @@ class EspControl{
   public:
   
     EspControl(){}
-
-    void _update () {
-      over_read();
+    
+    void update_esp(){
+      regular_send(); //отправка данных на esp
+      over_read(); //обработка данных, полученных от ESP
     }
+    
+  private:
+    String esp_string = "";
+    unsigned long time_turn_on;
+
+    //=======! отправка данных на esp !=======
+    void regular_send(){
+      if (millis() - time_turn_on > 2000){
+        time_turn_on = millis();
+        esp_write(generate_answer());
+      }
+    }
+
+    String generate_answer(){
+      if (dig_pins.find("fitoLed") != dig_pins.end()){
+        String answer = "/" + (String)get_filling_pin();
+        answer = answer + answer + "/";
+      } else {
+        String answer = "/no_date/no_date/";
+      }
+      answer += "/" + (String)return_sensor_val("temp") + "/" + (String)return_sensor_val("hum") + answer;
+      return answer + "3/";
+    }
+
+    float return_sensor_val(String key){
+      if (sensors_val.find(key) != sensors_val.end()){
+        return sensors_val[key].value;
+      }
+      return 0.0;
+    }
+
+    void esp_write(String send_data){
+      //Serial3.println(send_data);
+    }
+    
+    //=======! прием данных с ESP !=======
 
     void over_read(){
       String new_str = esp_read();
@@ -405,26 +447,6 @@ class EspControl{
       if (priem_c_ESP_str == "5") {} //включить авто
       if ((priem_c_ESP_str == "6")) {reset_priority();} //выключить авто
     }
-    
-  private:
-    String esp_string = "";
-
-    String generate_answer(){
-      String answer = "/";
-      //if ()
-    }
-    
-    String esp_read(){
-      /*
-      if (Serial3.available()){
-        return Serial3.readString();
-      }
-      return "";*/
-    }
-
-    void esp_write(String send_data){
-      //Serial3.println(send_data);
-    }
 
     void reset_priority(){
       for(auto it = dig_pins.begin(); it != dig_pins.end(); ++it){
@@ -434,6 +456,15 @@ class EspControl{
         }
       }
     }
+ 
+    String esp_read(){
+      /*
+      if (Serial3.available()){
+        return Serial3.readString();
+      }
+      return "";*/
+    }
+
 };
 
 

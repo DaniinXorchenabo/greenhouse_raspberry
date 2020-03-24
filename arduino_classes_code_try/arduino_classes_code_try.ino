@@ -408,6 +408,11 @@ class EspControl{
     
   private:
     String esp_string = "";
+
+    String generate_answer(){
+      String answer = "/";
+      //if ()
+    }
     
     String esp_read(){
       /*
@@ -447,15 +452,18 @@ Serial.println("rtrtr");
   //dig_pins["fitoLed"] = PinControl(10);
   //dig_pins["poliv"] = PinControl(24); 
   //dig_pins["fan_root"] = PinControl(4);//4
-  //mp["air"] = PinControl(30);
-  //mp["fan_air"] = PinControl(8);
+  //dig_pins["air"] = PinControl(30);
+  //dig_pins["fan_air"] = PinControl(8);
   //dig_pins["vapor"] = PinControl(12);
   //dig_pins["fan_vapor"] = PinControl(26);
   dig_pins["test"] = PinControl(13, LOW);
   //dig_pins["test"].turn_on_for_time(10000);
 
 
+  sensors_val["temp"] = (sens_val_strucr){88, AnalogReadPin(dht, "t")};
+  sensors_val["hum"] = (sens_val_strucr){88, AnalogReadPin(dht, "h")};
   sensors_val["gas"] = (sens_val_strucr){88, AnalogReadPin(1)};
+  
   Serial.println("rtrtr ");
   rasClass.test();
   Serial.println("rtrtr ");

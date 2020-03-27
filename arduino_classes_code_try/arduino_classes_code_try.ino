@@ -5,12 +5,14 @@
 //#include <vector>
 #include <iterator>
 #include <map>
-#include "DHT.h" 
+#include "DHT.h" ;
 
 using namespace std;
 
 DHT dht(7, DHT11);
-  
+SoftwareSerial raspb(53, 51);
+SoftwareSerial blut(52,50);
+
 class PinControl{
   public:
     int pin;
@@ -148,7 +150,7 @@ class PinControl{
     }
     
     int get_filling_pin(){
-      return pin_filling
+      return pin_filling;
     }
     
   private:
@@ -270,6 +272,7 @@ std::map <String, sens_val_strucr> sensors_val;
 class RaspberryPiControl{
   public:
     SoftwareSerial *raspb;
+    String start_day = "None";
     //std::map <String, sens_val_strucr> * sensors = NULL; //проверить, что тут: локальные копии или ссылки
     //std::map <String, PinControl> * digit_pins = NULL;
 
@@ -312,6 +315,8 @@ class RaspberryPiControl{
         }
       }
       else if (str == "get_parametrs"){get_val_sens();}
+      else if (str == "Give_start_day"){write_raspb("start_day " + start_day);}
+      
       if (str_raspb != str){ 
       }
     }
@@ -372,6 +377,7 @@ class RaspberryPiControl{
     }
 
 };
+RaspberryPiControl rasClass(raspb);
 
 class EspControl{
   public:
@@ -396,11 +402,12 @@ class EspControl{
     }
 
     String generate_answer(){
+      String answer;
       if (dig_pins.find("fitoLed") != dig_pins.end()){
-        String answer = "/" + (String)get_filling_pin();
+        answer = "/" + (String)dig_pins["fitoLed"].get_filling_pin();
         answer = answer + answer + "/";
       } else {
-        String answer = "/no_date/no_date/";
+        answer = "/no_date/no_date/";
       }
       answer += "/" + (String)return_sensor_val("temp") + "/" + (String)return_sensor_val("hum") + answer;
       return answer + "3/";
@@ -467,15 +474,76 @@ class EspControl{
 
 };
 
+class Bluetooth{
+  public:
+    SoftwareSerial *blut;
 
-SoftwareSerial raspb(52, 50);
-RaspberryPiControl rasClass(raspb);
+    Bluetooth(SoftwareSerial &blut_obj){
+      blut = &blut_obj;
+      blut->begin(9600);
+    }
+
+    void update_blut(){
+      tolking_with_android();
+    }
+
+  private:
+
+    void tolking_with_android(){
+      over_blut_read();
+    }
+    
+    String blut_read(){
+      if (blut->available()){
+        return (String)blut->readString();
+      }
+      return "";
+    }
+
+    void over_blut_read(){
+      String blut_data = blut_read();
+      if (blut_data != ""){
+        data_processing(blut_data); 
+      }
+    }
+
+    void data_processing(String blut_data){
+      if (blut_data.substring(0,8) == "set_day:"){
+        String start_day = blut_data.substring(9);
+      }
+      else if (blut_data.substring(0,1) == "/"){
+        
+      }
+    }
+
+    String parser_data(String divider){
+      //int count = 
+      
+    }
+    
+    void blut_write(String messenge){
+      blut->println(messenge);
+    }
+
+    String generate_answer(){
+      
+    }
+    
+};
+
+
+
+
+Bluetooth bluetooth(blut);
+
 
 void setup(){
   dht.begin();
   Serial.begin(9600);
 Serial.println("rtrtr");
-
+String anssss = "000000";
+Serial.println(anssss.indexOf("9-")); // работает
+Serial.println("rtrtr");
 
  // test = (sens_val_strucr){700, AnalogReadPin(0)};
   

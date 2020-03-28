@@ -152,6 +152,10 @@ class PinControl{
     int get_filling_pin(){
       return pin_filling;
     }
+
+    bool get_working_pin(){ // возвращает 1 если пин в режиме работы, 0 - если пин не работает
+      return (boolean)(pin_mode_l != now_pin_mode);
+    }
     
   private:
     unsigned long time_turn_on;
@@ -513,34 +517,48 @@ class Bluetooth{
         String start_day = blut_data.substring(9);
       }
       else if (blut_data.substring(0,1) == "/"){
+        if (get_segment_for_ans(blut_data, "/", 1) == "1"){  // работаем в ручном реживе (-1 в автоматическом)
+          parser_data(blut_data, "/");
+        }
         //parser_data(blut_data, "/")
       }
     }
 
-    String parser_data(String data, String divider){
+    String get_segment_for_ans(String data, String divider, int number){
       int first_ind = -1;
       int second_ind = data.indexOf(divider);
       data.trim();
       data += ">>>";
       int len_data = data.length();
-      Serial.println(len_data);
-      Serial.println(data);
+      int count = 0;
       while (second_ind != -1){
-        Serial.println("-=-==)))))))))))))");
         if (second_ind == -1 || len_data < second_ind || len_data <= first_ind){
-          Serial.println(first_ind);
-          Serial.println(second_ind);
-          Serial.println("break");
+          break;
+        }
+        ++count;
+        if (count == number){
+          return data.substring(first_ind + 1, second_ind);
+        }
+        first_ind = second_ind;
+        second_ind = data.indexOf(divider, first_ind + 1);
+      } 
+      return (String)"";
+    }
+
+    void parser_data(String data, String divider){
+      int first_ind = -1;
+      int second_ind = data.indexOf(divider);
+      data.trim();
+      data += ">>>";
+      int len_data = data.length();
+      while (second_ind != -1){
+        if (second_ind == -1 || len_data < second_ind || len_data <= first_ind){
           break;
         }
         String sub_str = data.substring(first_ind + 1, second_ind);
-        Serial.println("sub_str :" + (String)sub_str + ":");
         first_ind = second_ind;
         second_ind = data.indexOf(divider, first_ind + 1);
-        Serial.println("-=-==");
       } 
-      Serial.println("end parser answer");
-      return (String)"----";
     }
     
     void blut_write(String messenge){
@@ -548,7 +566,24 @@ class Bluetooth{
     }
 
     String generate_answer(){
-      
+      String answer = "-1 -1 " + formating_status_pin("fan_air") + " ";
+      answer += formating_status_pin("fan_root") + " -1 ";
+      return answer + formating_status_pin("vapor");
+    }
+
+    String formating_status_pin(String key){
+      bool _status = get_status_pin(key);
+      if (_status == true){
+        return String("1");
+      }
+      return String("-1");
+    }
+
+    bool get_status_pin(String key){
+      if (dig_pins.find(key) != dig_pins.end()){
+        return (bool)dig_pins[key].get_working_pin();
+      }
+      return false;
     }
     
 };

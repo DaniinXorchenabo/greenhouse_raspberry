@@ -182,15 +182,12 @@ class PinControl{
     void pin_write(boolean pin_mod){
       Serial.println("pin_write");
       if (now_pin_mode != pin_mod){
-        Serial.print("if pin_write ");
-        Serial.print(pin);
-         Serial.print(" ");
-        Serial.println(pin_mod);
-        //int i;
-        //for (i = 0; i < sizeof(pin); i++) {
-          digitalWrite(pin, pin_mod);
-          now_pin_mode = pin_mod;
-        //}
+        Serial.println("if pin_write " + (String)pin + " " + (String)pin_mod);
+        //Serial.print(pin);
+        //Serial.print(" ");
+        //Serial.println(pin_mod);
+        digitalWrite(pin, pin_mod);
+        now_pin_mode = pin_mod;
       }
     }
 
@@ -487,6 +484,10 @@ class Bluetooth{
       tolking_with_android();
     }
 
+    void test(String data){
+      parser_data(data, "/");
+    }
+    
   private:
 
     void tolking_with_android(){
@@ -512,13 +513,34 @@ class Bluetooth{
         String start_day = blut_data.substring(9);
       }
       else if (blut_data.substring(0,1) == "/"){
-        
+        //parser_data(blut_data, "/")
       }
     }
 
-    String parser_data(String divider){
-      //int count = 
-      
+    String parser_data(String data, String divider){
+      int first_ind = -1;
+      int second_ind = data.indexOf(divider);
+      data.trim();
+      data += ">>>";
+      int len_data = data.length();
+      Serial.println(len_data);
+      Serial.println(data);
+      while (second_ind != -1){
+        Serial.println("-=-==)))))))))))))");
+        if (second_ind == -1 || len_data < second_ind || len_data <= first_ind){
+          Serial.println(first_ind);
+          Serial.println(second_ind);
+          Serial.println("break");
+          break;
+        }
+        String sub_str = data.substring(first_ind + 1, second_ind);
+        Serial.println("sub_str :" + (String)sub_str + ":");
+        first_ind = second_ind;
+        second_ind = data.indexOf(divider, first_ind + 1);
+        Serial.println("-=-==");
+      } 
+      Serial.println("end parser answer");
+      return (String)"----";
     }
     
     void blut_write(String messenge){
@@ -536,13 +558,10 @@ class Bluetooth{
 
 Bluetooth bluetooth(blut);
 
-
+String serial_data = "";
 void setup(){
   dht.begin();
   Serial.begin(9600);
-Serial.println("rtrtr");
-String anssss = "000000";
-Serial.println(anssss.indexOf("9-")); // работает
 Serial.println("rtrtr");
 
  // test = (sens_val_strucr){700, AnalogReadPin(0)};
@@ -564,7 +583,7 @@ Serial.println("rtrtr");
   sensors_val["gas"] = (sens_val_strucr){88, AnalogReadPin(1)};
   
   Serial.println("rtrtr ");
-  rasClass.test();
+  //rasClass.test();
   Serial.println("rtrtr ");
   Serial.println(sensors_val["gas"].value);
 
@@ -576,6 +595,11 @@ void loop(){
   //update_sensors_value();
   delay(500);
   Serial.println("looping.....");
+  
+  if (Serial.available() > 0) {   
+    serial_data = (String)Serial.readString();//если есть доступные данные c блютуз 
+    bluetooth.test(serial_data); 
+  }
 }
 
 void update_pin(){

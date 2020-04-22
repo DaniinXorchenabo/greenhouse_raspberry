@@ -13,6 +13,10 @@ DHT dht(7, DHT11);
 SoftwareSerial raspb(53, 51);
 SoftwareSerial blut(52,50);
 
+#define PRIORITY_BLUT 500
+#define PRIORITY_ESP 200
+#define PRIORITY_RASPB 50
+
 class PinControl{
   public:
     int pin;
@@ -37,54 +41,6 @@ class PinControl{
 
     PinControl(){}
     
-    /*
-    PinControl(int pin_now[], boolean pin_mode_now[], int _size){ //конструктор класса
-      *pin_mode_l = new boolean[_size];
-      pin = new int[_size];
-      
-      //pin_mode_h = new boolean[_size];
-      //pin = {9,8,7,6,5};
-      Serial.println("----------------");
-      int i;
-      for (i = 0; i <= _size; i++)
-      {
-        pin[i] = pin_now[i];
-        pinMode(pin[i], OUTPUT);
-        *pin_mode_l[i] = pin_mode_now[i];
-        *pin_mode_h[i] = !pin_mode_now[i];
-        //Serial.println(pin_now[i]);
-      }
-      for (i = 0; i <= _size; i++)
-      {
-       // pin[i] = pin_now[i];
-        Serial.print(pin[i]);
-        Serial.print(" ");
-        Serial.print(*pin_mode_l[i]);
-        Serial.print(" ");
-        Serial.println(*pin_mode_h[i]);
-      }
-      Serial.println("----------------");
-
-      /*
-      
-      len = sizeof(pin_now)/sizeof(int*);
-      *pin_mode_l = new boolean[len];
-      *pin_mode_h = new boolean[len];
-      int i;
-      //Serial.println(typeid(i).name());
-      Serial.print("-------- ");
-      Serial.println(len);
-      //Serial.println(pin);
-      for (i = 0; i < sizeof(pin_now)/sizeof(int); i++) {//for (auto pin: example) {
-        Serial.println("-=-=");
-        pinMode(pin[i], OUTPUT);
-        pin_mode_l[i] = pin_mode_now[i];
-        pin_mode_h[i] = !pin_mode_now[i];
-      }
-      pin_write(pin_mode_l);
-      
-    }
-    */
     void edit_status_pin(bool status_pin){//постановка статуса пина
       edit_status_pin(status_pin, 1, false);
     }
@@ -140,9 +96,35 @@ class PinControl{
     void PWM_mode(int filling){
       analog_write_pin(filling);
     }
-
+  
+    void add_priority(int t){}
+    
     void set_priority(int now_priority){
-      priority = now_priority;
+      if (now_priority < 40){
+        int kostil = 0;
+        Serial.println("&&&&&&&%$$$$____________" + (String)priority);
+
+        if (now_priority > 9){
+          kostil = priority % (int)my_pow(10, now_priority/10 + 1) / (int)my_pow(10, now_priority/10); 
+          Serial.println("&___ " + (String)( kostil ));
+          kostil = (int)my_pow(10, now_priority/10) * kostil;
+          Serial.println("&___ " + (String)( kostil ));
+          priority -= kostil;
+          Serial.println("&___priority " + (String)( priority ));
+
+        } else {
+          Serial.println("&&&&&&&%$$$$________" + (String)(priority % (int)pow(10, now_priority/10 + 1)));
+          priority -= priority % (int)my_pow(10, now_priority/10 + 1);
+        }
+        //Serial.println("&&&&&&&%$$$$________" + (String)priority);
+         Serial.println("&___k0 " + (String)( now_priority/10 ));
+        kostil = (int)my_pow(10, (int)(now_priority/10));
+        Serial.println("&___k1 " + (String)( kostil ));
+        kostil *= now_priority % 10;
+        Serial.println("&___k2 " + (String)( kostil ));
+        priority += kostil;
+        Serial.println("&&&&&&&%$$$$____________" + (String)priority);
+      }
     }
 
     int get_priority(){
@@ -154,7 +136,7 @@ class PinControl{
     }
 
     bool get_working_pin(){ // возвращает 1 если пин в режиме работы, 0 - если пин не работает
-      return (boolean)(pin_mode_l != now_pin_mode);
+      return (bool)(pin_mode_l != now_pin_mode);
     }
     
   private:
@@ -163,20 +145,18 @@ class PinControl{
     int delay_t;
     int pin_filling = 0;
     //int over_pin_fill = 0;
-    int priority = 0;
+    int priority = 10000; // любое число|с сайта|с мобильного приложения|с разбери|с датчиков или по времени|
 
     void pin_write_priority(boolean pin_mod, int now_priority, bool save_priority){
       pin_write_priority(pin_mod, now_priority, save_priority, true);
     }
     
     bool pin_write_priority(boolean pin_mod, int now_priority, bool save_priority, bool isworking){
-      if (now_priority > priority){
-        Serial.println("now_priority > priority");
+      //now_priority = |номер ячейки в строке| значение этой ячейки|
+      if (levle_priority(now_priority)){
+        Serial.println("now_priority >= priority");
         if (isworking){
           pin_write(pin_mod);
-        }
-        if (save_priority){
-          priority = now_priority;
         }
         return true;
       }
@@ -187,9 +167,6 @@ class PinControl{
       Serial.println("pin_write");
       if (now_pin_mode != pin_mod){
         Serial.println("if pin_write " + (String)pin + " " + (String)pin_mod);
-        //Serial.print(pin);
-        //Serial.print(" ");
-        //Serial.println(pin_mod);
         digitalWrite(pin, pin_mod);
         now_pin_mode = pin_mod;
       }
@@ -210,6 +187,22 @@ class PinControl{
       pin_write(pin_mode_l);
       
     }
+
+    int levle_priority(int got_priority){
+      got_priority =  (int)pow(10, got_priority / 10) * got_priority % 10;
+      if (priority % 10000 <= got_priority){
+        return true;
+      }
+    }
+
+    int my_pow(int num, int _step){
+      int new_num = 1;
+      for (int i = 0; i < _step; ++i){
+        new_num *= num;
+      }
+      return new_num;
+    }
+
 };
 
 class AnalogReadPin{
@@ -438,18 +431,18 @@ class EspControl{
 
       if (priem_c_ESP_str == "3") {//свет включить
         if (dig_pins.find("fitoLed") != dig_pins.end()){
-          dig_pins["fitoLed"].edit_status_pin(true, 50, true);
+          dig_pins["fitoLed"].edit_status_pin(true, PRIORITY_ESP, true);
         }
       }
       if (priem_c_ESP_str == "2") {//свет выключить
         if (dig_pins.find("fitoLed") != dig_pins.end()){
-          dig_pins["fitoLed"].edit_status_pin(false, 50, true);
+          dig_pins["fitoLed"].edit_status_pin(false, PRIORITY_ESP, true);
         }
       }
       if (priem_c_ESP_str == "7") {/*digitalWrite(40,HIGH);   reset_esp = 1;*/} //resrt
       if (priem_c_ESP_str == "4") {  //полив
         if (dig_pins.find("poliv") != dig_pins.end()){
-          dig_pins["poliv"].turn_on_for_time(3000, 50);
+          dig_pins["poliv"].turn_on_for_time(3000, PRIORITY_ESP);
         }
       } 
       if (priem_c_ESP_str == "5") {} //включить авто
@@ -459,8 +452,8 @@ class EspControl{
     void reset_priority(){
       for(auto it = dig_pins.begin(); it != dig_pins.end(); ++it){
         int prt = it->second.get_priority();
-        if (prt >= 50 && prt < 100){
-          it->second.set_priority(prt - 50);
+        if (prt >= PRIORITY_ESP && prt < PRIORITY_BLUT){
+          it->second.add_priority(-PRIORITY_ESP);
         }
       }
     }
@@ -585,19 +578,36 @@ class Bluetooth{
       }
       return false;
     }
+
+    void set_status_pin(String key, bool working){
+      set_status_pin(key, working, true);
+    }
+
+    void set_status_pin(String key, bool working, bool save_priority){
+      if (dig_pins.find(key) != dig_pins.end()){
+        
+        dig_pins[key].edit_status_pin(working, PRIORITY_BLUT, save_priority);
+      }
+    }
     
 };
 
-
+/*
+по функции активации:
+  - по датчику или по времени
+  - по разпберри
+  - по мобильному приложению
+  - по сайту
+*/
 
 
 Bluetooth bluetooth(blut);
 
 String serial_data = "";
 void setup(){
-  dht.begin();
+  //dht.begin();
   Serial.begin(9600);
-Serial.println("rtrtr");
+Serial.println("^trtr");
 
  // test = (sens_val_strucr){700, AnalogReadPin(0)};
   
@@ -621,10 +631,23 @@ Serial.println("rtrtr");
   //rasClass.test();
   Serial.println("rtrtr ");
   Serial.println(sensors_val["gas"].value);
+  
 
+dig_pins.find("test")->second.set_priority(39);//19000
+dig_pins.find("test")->second.set_priority(5);//11405
+dig_pins.find("test")->second.set_priority(0);//11400
+/*dig_pins.find("test")->second.set_priority(31);//11000
+
+dig_pins.find("test")->second.set_priority(25);//11500
+dig_pins.find("test")->second.set_priority(24);//11400
+dig_pins.find("test")->second.set_priority(5);//11405
+//dig_pins.find("test")->second.set_priority(0);//11400
+dig_pins.find("test")->second.set_priority(35);//15405
+*/
 }
 
 void loop(){
+    
   update_pin();
   rasClass.raspb_update();
   //update_sensors_value();

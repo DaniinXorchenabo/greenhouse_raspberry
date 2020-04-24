@@ -607,7 +607,7 @@ Serial.println("^trtr");
   //dig_pins["air"] = PinControl(30);
   //dig_pins["fan_air"] = PinControl(8);
   dig_pins["vapor"] = PinControl(30);
-  //dig_pins["fan_vapor"] = PinControl(26);
+  dig_pins["fan_vapor"] = PinControl(26);
   dig_pins["test"] = PinControl(13, LOW);
   //dig_pins["test"].turn_on_for_time(10000);
 
@@ -636,10 +636,10 @@ dig_pins.find("test")->second.set_priority(5);//11405
 dig_pins.find("test")->second.set_priority(35);//15405
 */
 dig_pins.find("vapor")->second.edit_status_pin(true);
-dig_pins.find("test")->second.edit_status_pin(true);
-delay(10000);
+dig_pins.find("fan_vapor")->second.edit_status_pin(true);
+delay(30000);
 dig_pins.find("vapor")->second.edit_status_pin(false);
-dig_pins.find("test")->second.edit_status_pin(false);
+dig_pins.find("fan_vapor")->second.edit_status_pin(false);
 }
 
 void loop(){

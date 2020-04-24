@@ -102,28 +102,17 @@ class PinControl{
     void set_priority(int now_priority){
       if (now_priority < 40){
         int kostil = 0;
-        Serial.println("&&&&&&&%$$$$____________" + (String)priority);
-
         if (now_priority > 9){
           kostil = priority % (int)my_pow(10, now_priority/10 + 1) / (int)my_pow(10, now_priority/10); 
-          Serial.println("&___ " + (String)( kostil ));
           kostil = (int)my_pow(10, now_priority/10) * kostil;
-          Serial.println("&___ " + (String)( kostil ));
           priority -= kostil;
-          Serial.println("&___priority " + (String)( priority ));
-
         } else {
-          Serial.println("&&&&&&&%$$$$________" + (String)(priority % (int)pow(10, now_priority/10 + 1)));
           priority -= priority % (int)my_pow(10, now_priority/10 + 1);
         }
         //Serial.println("&&&&&&&%$$$$________" + (String)priority);
-         Serial.println("&___k0 " + (String)( now_priority/10 ));
         kostil = (int)my_pow(10, (int)(now_priority/10));
-        Serial.println("&___k1 " + (String)( kostil ));
         kostil *= now_priority % 10;
-        Serial.println("&___k2 " + (String)( kostil ));
         priority += kostil;
-        Serial.println("&&&&&&&%$$$$____________" + (String)priority);
       }
     }
 
@@ -617,12 +606,12 @@ Serial.println("^trtr");
   //dig_pins["fan_root"] = PinControl(4);//4
   //dig_pins["air"] = PinControl(30);
   //dig_pins["fan_air"] = PinControl(8);
-  //dig_pins["vapor"] = PinControl(12);
+  dig_pins["vapor"] = PinControl(30);
   //dig_pins["fan_vapor"] = PinControl(26);
   dig_pins["test"] = PinControl(13, LOW);
   //dig_pins["test"].turn_on_for_time(10000);
 
-
+/*
   sensors_val["temp"] = (sens_val_strucr){88, AnalogReadPin(dht, "t")};
   sensors_val["hum"] = (sens_val_strucr){88, AnalogReadPin(dht, "h")};
   sensors_val["gas"] = (sens_val_strucr){88, AnalogReadPin(1)};
@@ -631,12 +620,14 @@ Serial.println("^trtr");
   //rasClass.test();
   Serial.println("rtrtr ");
   Serial.println(sensors_val["gas"].value);
-  
+  */
 
+/*
 dig_pins.find("test")->second.set_priority(39);//19000
 dig_pins.find("test")->second.set_priority(5);//11405
 dig_pins.find("test")->second.set_priority(0);//11400
-/*dig_pins.find("test")->second.set_priority(31);//11000
+
+dig_pins.find("test")->second.set_priority(31);//11000
 
 dig_pins.find("test")->second.set_priority(25);//11500
 dig_pins.find("test")->second.set_priority(24);//11400
@@ -644,6 +635,11 @@ dig_pins.find("test")->second.set_priority(5);//11405
 //dig_pins.find("test")->second.set_priority(0);//11400
 dig_pins.find("test")->second.set_priority(35);//15405
 */
+dig_pins.find("vapor")->second.edit_status_pin(true);
+dig_pins.find("test")->second.edit_status_pin(true);
+delay(10000);
+dig_pins.find("vapor")->second.edit_status_pin(false);
+dig_pins.find("test")->second.edit_status_pin(false);
 }
 
 void loop(){

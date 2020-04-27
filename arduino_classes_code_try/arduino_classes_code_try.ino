@@ -13,8 +13,7 @@ DHT dht(7, DHT11);
 SoftwareSerial raspb(53, 51);
 SoftwareSerial blut(52,50);
 
-#define PRIORITY_BLUT 500
-#define PRIORITY_ESP 200
+
 #define PRIORITY_RASPB 50
 #define POLIV_DELAY 5000
 
@@ -422,18 +421,18 @@ class EspControl{
 
       if (priem_c_ESP_str == "3") {//свет включить
         if (dig_pins.find("fitoLed") != dig_pins.end()){
-          dig_pins["fitoLed"].edit_status_pin(true, PRIORITY_ESP, true);
+          dig_pins["fitoLed"].edit_status_pin(true, 31, true);
         }
       }
       if (priem_c_ESP_str == "2") {//свет выключить
         if (dig_pins.find("fitoLed") != dig_pins.end()){
-          dig_pins["fitoLed"].edit_status_pin(false, PRIORITY_ESP, true);
+          dig_pins["fitoLed"].edit_status_pin(false, 31, true);
         }
       }
       if (priem_c_ESP_str == "7") {/*digitalWrite(40,HIGH);   reset_esp = 1;*/} //resrt
       if (priem_c_ESP_str == "4") {  //полив
         if (dig_pins.find("poliv") != dig_pins.end()){
-          dig_pins["poliv"].turn_on_for_time(3000, PRIORITY_ESP);
+          dig_pins["poliv"].turn_on_for_time(POLIV_DELAY, 31);
         }
       } 
       if (priem_c_ESP_str == "5") {} //включить авто
@@ -442,12 +441,11 @@ class EspControl{
 
     void reset_priority(){
       for(auto it = dig_pins.begin(); it != dig_pins.end(); ++it){
-        it->second.add_priority(-PRIORITY_ESP);
+        it->second.set_priority(30);
       }
     }
  
     String esp_read(){
-      
       if (Serial3.available()){
         return Serial3.readString();
       }
@@ -474,6 +472,7 @@ class Bluetooth{
     }
     
   private:
+    bool is_last_mode_avto = true; //чтобы каждый раз не перезаписывать приоритет пинов
 
     void tolking_with_android(){
       over_blut_read();
@@ -502,11 +501,21 @@ class Bluetooth{
       else if (blut_data.substring(0,1) == "/"){
         if (get_segment_for_ans(blut_data, "/", 1) == "1"){  
           // работаем в ручном реживе (-1 в автоматическом)
+          is_last_mode_avto = false;
           parser_data(blut_data, "/");
         } else if (get_segment_for_ans(blut_data, "/", 1) == "-1"){
           //работаем в автоматическом режиме
+          if (!is_last_mode_avto){
+            reset_priority();
+            is_last_mode_avto = true;
+          }
         }
-        //parser_data(blut_data, "/")
+      }
+    }
+
+    void reset_priority(){
+      for(auto it = dig_pins.begin(); it != dig_pins.end(); ++it){
+        it->second.set_priority(20);
       }
     }
 

@@ -16,6 +16,8 @@ SoftwareSerial blut(52,50);
 #define PRIORITY_BLUT 500
 #define PRIORITY_ESP 200
 #define PRIORITY_RASPB 50
+#define POLIV_DELAY 5000;
+
 
 class PinControl{
   public:
@@ -73,7 +75,7 @@ class PinControl{
       if (pin_write_priority(delay_t_now, now_priority, save_priority, false)){
         delay(10);
         //Serial.println("turn_on_for_time if 1");
-       delay_t = delay_t_now;
+        delay_t = delay_t_now;
         time_turn_on = millis();
         is_work_for_time = true;
         pin_write(!pin_mode_l); /**/
@@ -440,19 +442,16 @@ class EspControl{
 
     void reset_priority(){
       for(auto it = dig_pins.begin(); it != dig_pins.end(); ++it){
-        int prt = it->second.get_priority();
-        if (prt >= PRIORITY_ESP && prt < PRIORITY_BLUT){
-          it->second.add_priority(-PRIORITY_ESP);
-        }
+        it->second.add_priority(-PRIORITY_ESP);
       }
     }
  
     String esp_read(){
-      /*
+      
       if (Serial3.available()){
         return Serial3.readString();
       }
-      return "";*/
+      return "";
     }
 
 };
@@ -479,14 +478,8 @@ class Bluetooth{
     void tolking_with_android(){
       over_blut_read();
     }
-    
-    String blut_read(){
-      if (blut->available()){
-        return (String)blut->readString();
-      }
-      return "";
-    }
 
+    //=======! Чтение !=======
     void over_blut_read(){
       String blut_data = blut_read();
       if (blut_data != ""){
@@ -494,13 +487,24 @@ class Bluetooth{
       }
     }
 
+    String blut_read(){
+      if (blut->available()){
+        return (String)blut->readString();
+      }
+      return "";
+    }
+
+    //=======! Обработка полученных данных !=======
     void data_processing(String blut_data){
       if (blut_data.substring(0,8) == "set_day:"){
         String start_day = blut_data.substring(9);
       }
       else if (blut_data.substring(0,1) == "/"){
-        if (get_segment_for_ans(blut_data, "/", 1) == "1"){  // работаем в ручном реживе (-1 в автоматическом)
+        if (get_segment_for_ans(blut_data, "/", 1) == "1"){  
+          // работаем в ручном реживе (-1 в автоматическом)
           parser_data(blut_data, "/");
+        } else if (get_segment_for_ans(blut_data, "/", 1) == "-1"){
+          //работаем в автоматическом режиме
         }
         //parser_data(blut_data, "/")
       }
@@ -528,8 +532,10 @@ class Bluetooth{
     }
 
     void parser_data(String data, String divider){
+      //ручной режим работы
       int first_ind = -1;
       int second_ind = data.indexOf(divider);
+      int counter = 0;
       data.trim();
       data += ">>>";
       int len_data = data.length();
@@ -538,16 +544,40 @@ class Bluetooth{
           break;
         }
         String sub_str = data.substring(first_ind + 1, second_ind);
+        processing_data_by_one(counter, sub_str)
         first_ind = second_ind;
         second_ind = data.indexOf(divider, first_ind + 1);
+        ++counter;
       } 
     }
+
+    void processing_data_by_one(int number_data, String status_pin){
+      if (number_data == 0) {
+        //это статус авто или нет
+      } else if (number_data == 1) {
+        //нашреватель
+      } else if (number_data == 2) {
+        //охлодитель
+      } else if (number_data == 3) {
+        //вентилятор на проветривание
+      } else if (number_data == 4) {
+        //вентилятор корней
+      } else if (number_data == 5) {
+        //полив
+      } else if (number_data == 6) {
+        //испаритель
+      }
+      
+    }
+
     
+    //=======! Отправка данных обратоно !=======
     void blut_write(String messenge){
       blut->println(messenge);
     }
 
     String generate_answer(){
+      //answer = "нагреватель охлодитель вентилятор_на_проветривание вентилятор_корней полив испаритель"
       String answer = "-1 -1 " + formating_status_pin("fan_air") + " ";
       answer += formating_status_pin("fan_root") + " -1 ";
       return answer + formating_status_pin("vapor");
@@ -568,14 +598,31 @@ class Bluetooth{
       return false;
     }
 
+    //=======! Изменение статуса пина (включение или выключение) !=======
+    void set_status_pin_for_str(String key, String _st){
+      if (dig_pins.find(key) != dig_pins.end()){
+        if (_st == "1"){
+          //включить
+          set_status_pin(key, true, true);
+        } else if (_st == "-1"){
+          //выключить
+          set_status_pin(key, false, true);
+        }
+        if (_st != "3" && _st != "0"){}
+      }
+    }
+    
     void set_status_pin(String key, bool working){
       set_status_pin(key, working, true);
     }
 
     void set_status_pin(String key, bool working, bool save_priority){
       if (dig_pins.find(key) != dig_pins.end()){
-        
-        dig_pins[key].edit_status_pin(working, PRIORITY_BLUT, save_priority);
+        if (key != "poliv"){
+          dig_pins.find(key)->second.edit_status_pin(working, 21, save_priority);
+        } else {
+          dig_pins.find(key)->second.turn_on_for_time(POLIV_DELAY, 21);
+        }
       }
     }
     
@@ -589,7 +636,7 @@ class Bluetooth{
   - по сайту
 */
 
-
+EspControl espControl;
 Bluetooth bluetooth(blut);
 
 String serial_data = "";
@@ -600,25 +647,27 @@ Serial.println("^trtr");
 
  // test = (sens_val_strucr){700, AnalogReadPin(0)};
   
-  //dig_pins["whiteLed"] = PinControl(9);
-  //dig_pins["fitoLed"] = PinControl(10);
+  dig_pins["whiteLed"] = PinControl(9);
+  dig_pins["fitoLed"] = PinControl(10);
 
   
   //dig_pins["air"] = PinControl(30);
   dig_pins["fan_air"] = PinControl(33);
   dig_pins["vapor"] = PinControl(30);
-  //dig_pins["fan_root"] = PinControl(28);//4
+  dig_pins["fan_root"] = PinControl(28);//4
   dig_pins["fan_vapor"] = PinControl(26);
-  //dig_pins["poliv"] = PinControl(24); 
+  dig_pins["poliv"] = PinControl(24); 
   
   dig_pins["test"] = PinControl(13, LOW);
   //dig_pins["test"].turn_on_for_time(10000);
 
-/*
+
   sensors_val["temp"] = (sens_val_strucr){88, AnalogReadPin(dht, "t")};
   sensors_val["hum"] = (sens_val_strucr){88, AnalogReadPin(dht, "h")};
   sensors_val["gas"] = (sens_val_strucr){88, AnalogReadPin(1)};
-  
+  sensors_val["level_poliv"] = (sens_val_strucr){88, AnalogReadPin(0)};
+  sensors_val["level_vapor"] = (sens_val_strucr){88, AnalogReadPin(2)};
+  /*
   Serial.println("rtrtr ");
   //rasClass.test();
   Serial.println("rtrtr ");
@@ -640,7 +689,7 @@ dig_pins.find("test")->second.set_priority(35);//15405
 */
 dig_pins.find("fan_air")->second.edit_status_pin(true);
 dig_pins.find("fan_vapor")->second.edit_status_pin(true);
-delay(15000);
+delay(1000);
 dig_pins.find("fan_air")->second.edit_status_pin(false);
 dig_pins.find("fan_vapor")->second.edit_status_pin(false);
 }
@@ -650,7 +699,9 @@ void loop(){
     
   update_pin();
   rasClass.raspb_update();
-  //update_sensors_value();
+  bluetooth.update_blut();
+  espControl.update_esp();
+  update_sensors_value();
   delay(500);
   Serial.println("looping.....");
   
@@ -668,11 +719,11 @@ void update_pin(){
   }
 }
 /**/
-/*
+
 void update_sensors_value(){
   for(auto it = sensors_val.begin(); it != sensors_val.end(); ++it){
     //sensors_val[(String)it->first].value = it->second.cls.get_value();
     it->second.value = it->second.cls.get_value();
   }
-}*/
+}
 

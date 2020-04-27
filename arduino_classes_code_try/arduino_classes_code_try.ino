@@ -16,7 +16,7 @@ SoftwareSerial blut(52,50);
 #define PRIORITY_BLUT 500
 #define PRIORITY_ESP 200
 #define PRIORITY_RASPB 50
-#define POLIV_DELAY 5000;
+#define POLIV_DELAY 5000
 
 
 class PinControl{
@@ -544,7 +544,7 @@ class Bluetooth{
           break;
         }
         String sub_str = data.substring(first_ind + 1, second_ind);
-        processing_data_by_one(counter, sub_str)
+        processing_data_by_one(counter, sub_str);
         first_ind = second_ind;
         second_ind = data.indexOf(divider, first_ind + 1);
         ++counter;

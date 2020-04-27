@@ -13,10 +13,7 @@ DHT dht(7, DHT11);
 SoftwareSerial raspb(53, 51);
 SoftwareSerial blut(52,50);
 
-
-#define PRIORITY_RASPB 50
 #define POLIV_DELAY 5000
-
 
 class PinControl{
   public:
@@ -257,96 +254,60 @@ class RaspberryPiControl{
   public:
     SoftwareSerial *raspb;
     String start_day = "None";
-    //std::map <String, sens_val_strucr> * sensors = NULL; //проверить, что тут: локальные копии или ссылки
-    //std::map <String, PinControl> * digit_pins = NULL;
 
-    RaspberryPiControl(SoftwareSerial &ras){ //, std::map <String, sens_val_strucr> * sensors_new, std::map <String, PinControl> * pins_new
+    RaspberryPiControl(SoftwareSerial &ras){
       raspb = &ras;
-      //sensors = sensors_new;
-      //digit_pins = pins_new;
-      //pins_new["whiteLed"].edit_status_pin(true);
       raspb->begin(9600);
     }
     
     void raspb_update(){
       over_read_raspb();
     }
+        
 
+  private:
+    String new_str_raspb = "";
+    String str_raspb = "";
+    
+    //=======! чтение с распберри !=======
     void over_read_raspb(){ // считывается строка, полученная с разбери
       String raspb_data = read_raspb();
       if (raspb_data != ""){
         data_processing(raspb_data); 
       }
     }
-        
-    void data_processing(String str){ // обработка строки
-      write_raspb("I get: " + str);
-      str_raspb = str;
-      if (str == "WhiteLedHIGH"){ 
-        if (dig_pins.find("whiteLed") != dig_pins.end()){
-          dig_pins.find("whiteLed")->second.edit_status_pin(true);
-        }
-      }
-      else if (str == "WhiteLedLOW"){
-        if (dig_pins.find("whiteLed") != dig_pins.end()){
-          dig_pins.find("whiteLed")->second.edit_status_pin(false);
-        }
-      }
-      else if (str == "polivHIGH"){
-        if (dig_pins.find("poliv") != dig_pins.end()){
-          dig_pins.find("poliv")->second.turn_on_for_time(3000);
-          //get_digitPin_obj("poliv")->turn_on_for_time(3000);
-        }
-      }
-      else if (str == "get_parametrs"){get_val_sens();}
-      else if (str == "Give_start_day"){write_raspb("start_day " + start_day);}
-      
-      if (str_raspb != str){ 
-      }
-    }
     
-    void test(){
-      Serial.println("---");
-      //Serial.println(digit_pins->find("test")->second.pin);
-      //digit_pins->find("test")->second.turn_on_for_time(10000);
-      sensors_val["gas"].value = 137.0;
-    }
-    
-  private:
-    String new_str_raspb = "";
-    String str_raspb = "";
-
-    void set_value_for_sensor_struct(String key, float value){
-      if (sensors_val.find(key) !=sensors_val.end()){
-        sensors_val.find(key)->second.value = 68;
-      }
-    }
-    
-    float get_value_for_sensor_struct(String key){
-      if (sensors_val.find(key) !=sensors_val.end()){
-        return sensors_val.find(key)->second.value;
-      }
-      return -1.0;
-    }
-    
-    /*
-    PinControl get_digitPin_obj(String key){
-      if (digit_pins->find(key) != digit_pins->end()){
-        return digit_pins->find(key)->second;
-      }
-      return digit_pins->find(key)->second;
-    }
-    */
-    
-    void write_raspb(String text){
-      raspb->println(text);
-    }
-
     String read_raspb(){
       if (raspb->available()){
         return (String)raspb->readString();
       }
       return "";
+    }
+
+    //=======! Обработка полученных данных !=======
+    void data_processing(String str){ // обработка строки
+      write_raspb("I get: " + str);
+      str_raspb = str;
+      if (str == "WhiteLedHIGH"){ 
+        if (dig_pins.find("whiteLed") != dig_pins.end()){
+          dig_pins.find("whiteLed")->second.edit_status_pin(true, 11, true);
+        }
+      }
+      else if (str == "WhiteLedLOW"){
+        if (dig_pins.find("whiteLed") != dig_pins.end()){
+          dig_pins.find("whiteLed")->second.edit_status_pin(false, 11, true);
+        }
+      }
+      else if (str == "polivHIGH"){
+        if (dig_pins.find("poliv") != dig_pins.end()){
+          dig_pins.find("poliv")->second.turn_on_for_time(POLIV_DELAY, 11);
+        }
+      }
+      else if (str == "get_parametrs"){write_raspb(get_val_sens());}
+      else if (str == "Give_start_day"){write_raspb("start_day " + start_day);}
+      
+      if (str_raspb != str){ 
+      }
     }
 
     String get_val_sens(){
@@ -358,6 +319,11 @@ class RaspberryPiControl{
         ret += "/";
       }
       return ret;
+    }
+
+    //=======! отправление данеых !=======
+    void write_raspb(String text){
+      raspb->println(text);
     }
 
 };

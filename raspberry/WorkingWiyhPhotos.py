@@ -10,7 +10,8 @@ def read_IP_setver_for_text_file():
         return ip, int(port)
     except Exception as e:
         print("erorr in reading serverIP.txt file: ", e)
-        return None
+        return None, None
+
 
 # класс для отправки фотографий на сервер и приёма ответа обратно
 class ProSoket():
@@ -62,7 +63,6 @@ class ProSoket():
             self.prnt(data_arr)
             self.clas_UNO.flovers_yes_or_no = data_arr[0]
             sock.close()
-
 
 
 class ProtectForYellow(threading.Thread):
@@ -147,6 +147,7 @@ class NeiroCetGiveImage(threading.Thread):
         self.prnt = lambda *cont: fixprint(*cont, test=debag, class_name=name)
 
     def run(self):
+        self.heating_cam()
         while True:
             if 1 == 1:  # try:
                 try:
@@ -212,6 +213,22 @@ class NeiroCetGiveImage(threading.Thread):
 
             sleep(self.interval)
 
+    @staticmethod
+    def heating_cam():
+        # cv2.namedWindow("frame")  # создаем главное окно
+        try:
+            cap = cv2.VideoCapture(0)
+        except Exception:
+            try:
+                cap = cv2.VideoCapture(-1)
+            except Exception:
+                cap = cv2.VideoCapture(0)
+        print('камера подключена')
+        for i in range(30):
+            cap.read()
+        cap.release()
+        print('камера прогрета')
+
 
 def obrezka_do_razmer(image, inp, out, w, h):
     im = image
@@ -240,7 +257,7 @@ def plus_rasmer(image, inp, out, w, h, debag=False):
         im.save(out)
         return True
     if (w_old > 256) or (h_old > 256):
-        #print('===============================')
+        # print('===============================')
         im = scale_image(im, inp, out)
     w_old, h_old = im.size
     if (w_old > w) or (h_old > h):

@@ -15,17 +15,19 @@ def wath_start_time(debag=False):
         file.close()
     return d, h, m
 
+
 def rewriting_start_time(d, h, m):
     file = open('time.txt', 'w', encoding='utf-8')
     file.write(str(d) + ' ' + str(h) + ' ' + str(m))
     file.close()
 
+
 def butiful_time(secunds, d=0, h=0, m=0):
     minuts = secunds // 60 + m
     hours = minuts // 60 + h
     days = hours // 24 + d
-    minuts = minuts % 60  #(hours - h%24 - m//60) * 60
-    hours = hours % 24 # (days - d - h//24) * 24
+    minuts = minuts % 60  # (hours - h%24 - m//60) * 60
+    hours = hours % 24  # (days - d - h//24) * 24
     return days, hours, minuts
 
 

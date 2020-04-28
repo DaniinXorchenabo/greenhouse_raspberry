@@ -1,4 +1,6 @@
 from random import shuffle
+
+
 class TrySerial():
     def __init__(self, way, speed, debag=False):
         self.debag = debag
@@ -14,6 +16,7 @@ class TrySerial():
         shuffle(answers)
         return bytes(answers[0], encoding="utf-8")
 
+
 try:
     from PIL import Image
 except Exception as e:
@@ -22,15 +25,16 @@ except Exception as e:
 import socket, pickle
 import numpy as np
 import os
-from time import sleep, ctime, time #clock
+from time import sleep, ctime, time  # clock
 from itertools import cycle, chain
 import glob
 
 import threading
 import sys
+
 fixedBags = [True]
 fix_func = lambda *a, test=fixedBags: print(*(str(i) for i in a)) if test[0] else a
-fixprint= lambda *a, test=False, class_name='':\
+fixprint = lambda *a, test=False, class_name='': \
     print(("поток " + str(class_name) + ":" \
                if class_name != "" else ""), *(str(i) for i in a)) if test else ""
 

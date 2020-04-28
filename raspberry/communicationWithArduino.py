@@ -63,9 +63,12 @@ class ContactWithArd(threading.Thread):
                 pass
         self.working_ports = list(set(self.working_ports + serial_ports()))
         self.prnt(self.working_ports)
-        self.ard_port = self.working_ports[0]
+        self.ard_port = self.working_ports[0] if bool(self.working_ports) else "some_port"
         self.speed_port = 9600
-        self.ser = Serial(self.ard_port, self.speed_port)
+        try:
+            self.ser = Serial(self.ard_port, self.speed_port)
+        except SerialException as e:
+            self.ser = TrySerial(self.ard_port, self.speed_port)
         self.daemon = True
         self.flovers_yes_or_no = 'no'
         self.dengerous = False
@@ -134,6 +137,7 @@ class DataProcessingForArduino(threading.Thread):
 
 
 def serial_ports():
+    global Serial, SerialException
     """ Lists serial port names
         :raises EnvironmentError:
             On unsupported or unknown platforms

@@ -1,8 +1,24 @@
+from random import shuffle
+class TrySerial():
+    def __init__(self, way, speed, debag=False):
+        self.debag = debag
+        self._write = ""
+
+    def write(self, write, encoding='utf-8'):
+        self._write = write.decode().strip()
+        fixprint("SerialClass printing:", write, test=self.debag)
+
+    def readline(self):
+        sleep(10)
+        answers = ["I get: " + self._write, 'какая-то строка']
+        shuffle(answers)
+        return bytes(answers[0], encoding="utf-8")
+
 try:
     from PIL import Image
 except Exception as e:
     print('import PIL error', e)
-from random import shuffle
+
 import socket, pickle
 import numpy as np
 import os
@@ -22,12 +38,6 @@ try:
     from serial import Serial, SerialException
 except Exception as e:
     print('import serial error', e)
-    '''
-    class Serial():
-        def __init__(self, way, speed, debag=False):
-            self.debag = debag
-
-        def write(self, write, encoding='utf-8'):
-            fixprint("SerialClass printing:", write, test=self.debag)
-    '''
+    Serial = TrySerial
+    SerialException = OSError
 import cv2

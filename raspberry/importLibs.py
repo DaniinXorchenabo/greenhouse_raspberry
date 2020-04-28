@@ -7,7 +7,7 @@ import socket, pickle
 import numpy as np
 import os
 from time import sleep, ctime, time #clock
-from itertools import cycle
+from itertools import cycle, chain
 import glob
 
 import threading

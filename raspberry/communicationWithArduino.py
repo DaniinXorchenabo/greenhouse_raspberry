@@ -70,21 +70,35 @@ class ContactWithArd(threading.Thread):
         self.flovers_yes_or_no = 'no'
         self.dengerous = False
         self.live_potok = True
-        self.send = False
+        self.send = iter([])
+        self.is_good_send_set = set()
 
     def run(self):
         while self.live_potok:
             ard_input = self.ser.readline().decode().strip()
-            if self.send: #  если отправка
-                formating = bytes(str(self.send) + '\r\n', encoding='utf-8')
+            if "I get: " == ard_input[:7]:
+                self.is_good_send_set -= set([ard_input[7:]])
+            send = self.get_send_from_iter()
+            if send: #  если отправка
+                self.is_good_send_set.add(str(send))
+                formating = bytes(str(send) + '\r\n', encoding='utf-8')
                 self.prnt("отправил строку УНЕ", formating)
                 self.ser.write(formating)
-                self.send = False
             self.prnt("получил строку от UNO", ard_input)
             #self.pros_ard.new_str(ard_input)
 
     def send_to_port(self, text):
-        self.send = text
+        self.send = chain(iter([text]), self.send)
+
+    def get_send_from_iter(self):
+        try:
+            return next(self.send)
+        except StopIteration:
+            if bool(self.is_good_send_set):
+                el = self.is_good_send_set.pop()
+                self.is_good_send_set.add(el)
+                return el
+            return None
 
 
 class DataProcessingForArduino(threading.Thread):

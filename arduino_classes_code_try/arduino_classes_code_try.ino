@@ -712,6 +712,8 @@ void vapor_activation_func(String key){
   if (sensors_val.find("hum") !=  sensors_val.end()){
     if (sensors_val.find("hum")->second.value <= VAPOR_ACTIVATION_LEVLE){
       PinControl::static_edit_status_pin(key, true, 1, true);
+    } else if (sensors_val.find("hum")->second.value >= VAPOR_DISACTIVATION_LEVLE){
+      PinControl::static_edit_status_pin(key, false, 1, true);
     }
   }    
 }

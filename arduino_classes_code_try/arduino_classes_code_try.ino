@@ -22,6 +22,7 @@ class PinControl{
     int8_t pin = 43;
     boolean pin_mode_l = LOW;
     boolean now_pin_mode;
+    void (*activate_func_from_out)(String) = NULL;
     
     PinControl(int pin_now, boolean pin_mode_now, int over_pin_fill){ //конструктор класса
       //over_pin_fill = over_pin_fill;
@@ -40,6 +41,14 @@ class PinControl{
     }
 
     PinControl(){}
+    
+    void run_activation_func(String key){
+      if (activate_func_from_out != NULL){
+        activate_func_from_out(key);
+      } else {
+         Serial.println("NULL activate func");
+      }
+    }
 
     static void static_edit_status_pin(String key, bool status_pin, int now_priority, bool save_priority);
     
@@ -83,10 +92,9 @@ class PinControl{
       
     }
     
-    void update_pin(){ //метод, который должен постоянно крутиться в loop
-      //Serial.println("update");
+    void update_pin(String key){ //метод, который должен постоянно крутиться в loop
+      run_activation_func(key);
       if (is_work_for_time){
-        //Serial.println("if working");
         if (millis() - time_turn_on > delay_t){
           Serial.println("end_time_work");
           is_work_for_time = false;
@@ -641,6 +649,7 @@ Serial.println(VAPOR_ACTIVATION_LEVLE);
   
   dig_pins["test"] = PinControl(13, LOW);
   //dig_pins["test"].turn_on_for_time(10000);
+  dig_pins.find("test")->second.activate_func_from_out = &test_activ_func;
 
 
   sensors_val["temp"] = (sens_val_strucr){88, AnalogReadPin(dht, "t")};
@@ -668,9 +677,7 @@ dig_pins.find("test")->second.set_priority(5);//11405
 //dig_pins.find("test")->second.set_priority(0);//11400
 dig_pins.find("test")->second.set_priority(35);//15405
 */
-PinControl::static_edit_status_pin("test", true, 1, false);
-delay(10000);
-PinControl::static_edit_status_pin("test", false, 1, false);
+
 }
 
 
@@ -694,7 +701,7 @@ void update_pin(){
   for(auto it = dig_pins.begin(); it != dig_pins.end(); ++it){
     //Serial.println((String)it->first);
     //Serial.println("--------------------------------");
-    it->second.update_pin();
+    it->second.update_pin(it->first);
   }
 }
 /**/
@@ -716,6 +723,14 @@ void vapor_activation_func(String key){
       PinControl::static_edit_status_pin(key, false, 1, true);
     }
   }    
+}
+
+void test_activ_func(String key){
+  if (key == "act"){
+    PinControl::static_edit_status_pin("test", true, 1, false);
+    delay(5000);
+    PinControl::static_edit_status_pin("test", false, 1, false);
+  }
 }
 
 void PinControl::static_edit_status_pin(String key, bool status_pin, int now_priority, bool save_priority){

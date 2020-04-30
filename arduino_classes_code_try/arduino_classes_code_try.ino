@@ -16,26 +16,98 @@ SoftwareSerial blut(52,50);
 int POLIV_DELAY = 5000;
 int8_t VAPOR_ACTIVATION_LEVLE = 60;
 int8_t VAPOR_DISACTIVATION_LEVLE = VAPOR_ACTIVATION_LEVLE + 20;
+int8_t GAS_ACTIVATION_LEVLE = 60;
+int8_t GAS_DISACTIVATION_LEVLE = GAS_ACTIVATION_LEVLE + 20;
+
+class ActivateWork{
+  public:
+    String key = "";
+    String key_senser = "";
+    int low_level = 50;
+    int high_level = 50;
+    int8_t how_func = 1;
+
+    ActivateWork(){}
+    ActivateWork(String key_n, String key_senser_n, int low_level_n, int high_level_n){
+      key = key_n;
+      key_senser = key_senser_n;
+      low_level = low_level_n;
+      high_level = high_level_n;
+    }
+    ActivateWork(String key_n, String key_senser_n, int low_level_n, int high_level_n, int8_t how_func_n){
+      key = key_n;
+      key_senser = key_senser_n;
+      low_level = low_level_n;
+      high_level = high_level_n;
+      how_func = how_func_n;
+    }
+
+    void activate_change(){
+      activate_change(how_func, key);
+    }
+    void activate_change(int8_t how_func_n){
+      activate_change(how_func_n, key);
+    }
+    void activate_change_key(String key_n){
+      activate_change(how_func, key_n);
+    }
+    void activate_change(int8_t how_func_n, String key_n){
+      if (how_func_n == 1){
+        standart_activation_func(key_n);
+      } else if (how_func_n == 100){
+        Serial.println("==================================work test activ");
+        test_activ_func();
+      }
+    }
+    
+    void standart_activation_func(){
+      standart_activation_func(key);
+    }
+    void standart_activation_func(String key_n);
+
+    void test_activ_func();
+};
 
 class PinControl{
   public:
     int8_t pin = 43;
     boolean pin_mode_l = LOW;
-    boolean now_pin_mode;
-    void (*activate_func_from_out)(String) = NULL;
+    boolean now_pin_mode = pin_mode_l;
+    //void (*activate_func_from_out)(String) = NULL;
+    ActivateWork *activate_work = NULL;
+
+    PinControl(int pin_now, ActivateWork &activate_work_n){ //конструктор класса , bool useless1, bool useless2 , void (*func)(String)
+      //activate_func_from_out = func;
+      activate_work = &activate_work_n;
+      pin_mode_l = LOW;
+      starting(pin_now);
+    }
+    PinControl(int pin_now, boolean pin_mode_now, ActivateWork &activate_work_n){ //конструктор класса
+      //activate_func_from_out = func;
+      activate_work = &activate_work_n;
+      pin_mode_l = pin_mode_now;
+      Serial.println("************************ " + (String)activate_work->how_func);
+      starting(pin_now);
+    }
+    PinControl(int pin_now, boolean pin_mode_now, int over_pin_fill, ActivateWork &activate_work_n){ //конструктор класса
+      //activate_func_from_out = func;
+      //over_pin_fill = over_pin_fill;
+      activate_work = &activate_work_n;
+      
+      pin_mode_l = pin_mode_now;
+      starting(pin_now);
+    }
     
     PinControl(int pin_now, boolean pin_mode_now, int over_pin_fill){ //конструктор класса
       //over_pin_fill = over_pin_fill;
       pin_mode_l = pin_mode_now;
       starting(pin_now);
     }
-    
     PinControl(int pin_now, boolean pin_mode_now){ //конструктор класса
       pin_mode_l = pin_mode_now;
       starting(pin_now);
     }
-
-    PinControl(int pin_now ){ //конструктор класса
+    PinControl(int pin_now){ //конструктор класса
       pin_mode_l = LOW;
       starting(pin_now);
     }
@@ -43,10 +115,10 @@ class PinControl{
     PinControl(){}
     
     void run_activation_func(String key){
-      if (activate_func_from_out != NULL){
-        activate_func_from_out(key);
+      if (activate_work != NULL){
+        activate_work->activate_change_key(key);
       } else {
-         Serial.println("NULL activate func");
+         //Serial.println("NULL activate func");
       }
     }
 
@@ -184,6 +256,7 @@ class PinControl{
       Serial.println(pin_now);
       pinMode(pin_now, OUTPUT);
       pin_write(pin_mode_l);
+      pin_mode_l
       
     }
 
@@ -626,14 +699,16 @@ class Bluetooth{
 EspControl espControl;
 Bluetooth bluetooth(blut);
 
+ActivateWork activate_vapor("vapor", "hum", VAPOR_ACTIVATION_LEVLE, VAPOR_DISACTIVATION_LEVLE, 1); //и для испарителя и для его вентилятора
+ActivateWork activate_test("test", "test", 1, 2, 100);
+
+
 String serial_data = "";
 void setup(){
   //dht.begin();
   Serial.begin(9600);
 Serial.println("^trtr");
-Serial.println(VAPOR_ACTIVATION_LEVLE);
-VAPOR_ACTIVATION_LEVLE = 40;
-Serial.println(VAPOR_ACTIVATION_LEVLE);
+Serial.println(activate_test.how_func);
  // test = (sens_val_strucr){700, AnalogReadPin(0)};
   
   dig_pins["whiteLed"] = PinControl(9);
@@ -642,21 +717,23 @@ Serial.println(VAPOR_ACTIVATION_LEVLE);
   
   //dig_pins["air"] = PinControl(30);
   //dig_pins["fan_air"] = PinControl(33);
-  dig_pins["vapor"] = PinControl(30);
+  dig_pins["vapor"] = PinControl(30, activate_vapor);
   dig_pins["fan_root"] = PinControl(28);//4
-  dig_pins["fan_vapor"] = PinControl(26);
+  dig_pins["fan_vapor"] = PinControl(26, activate_vapor);
   dig_pins["poliv"] = PinControl(24); 
   
-  dig_pins["test"] = PinControl(13, LOW);
+  dig_pins["test"] = PinControl(13, (boolean)LOW, activate_test); //test_activ_func
   //dig_pins["test"].turn_on_for_time(10000);
-  dig_pins.find("test")->second.activate_func_from_out = &test_activ_func;
+  //dig_pins.find("test")->second.activate_func_from_out = &test_activ_func;
+
+  //dig_pins.find("test")->second.run_activation_func("test");
 
 
-  sensors_val["temp"] = (sens_val_strucr){88, AnalogReadPin(dht, "t")};
-  sensors_val["hum"] = (sens_val_strucr){88, AnalogReadPin(dht, "h")};
-  sensors_val["gas"] = (sens_val_strucr){88, AnalogReadPin(1)};
-  sensors_val["level_poliv"] = (sens_val_strucr){88, AnalogReadPin(0)};
-  sensors_val["level_vapor"] = (sens_val_strucr){88, AnalogReadPin(2)};
+  sensors_val["temp"] = (sens_val_strucr){23, AnalogReadPin(dht, "t")};
+  sensors_val["hum"] = (sens_val_strucr){70, AnalogReadPin(dht, "h")};
+  sensors_val["gas"] = (sens_val_strucr){5, AnalogReadPin(1)};
+  sensors_val["level_poliv"] = (sens_val_strucr){500, AnalogReadPin(0)};
+  sensors_val["level_vapor"] = (sens_val_strucr){500, AnalogReadPin(2)};
   /*
   Serial.println("rtrtr ");
   //rasClass.test();
@@ -688,7 +765,7 @@ void loop(){
   bluetooth.update_blut();
   espControl.update_esp();
   update_sensors_value();
-  delay(500);
+  delay(3000);
   //Serial.println("looping.....");
   
   if (Serial.available() > 0) {   
@@ -715,7 +792,11 @@ void update_sensors_value(){
   Serial.println();
 }
 
-void vapor_activation_func(String key){
+void vapor_activation_func(){ // String key, String sensor_key, int low_level, int high_level
+  String key = "";
+  String sensor_key = "";
+  int low_level = 50;
+  int high_level = 50 ;
   if (sensors_val.find("hum") !=  sensors_val.end()){
     if (sensors_val.find("hum")->second.value <= VAPOR_ACTIVATION_LEVLE){
       PinControl::static_edit_status_pin(key, true, 1, true);
@@ -725,13 +806,7 @@ void vapor_activation_func(String key){
   }    
 }
 
-void test_activ_func(String key){
-  if (key == "act"){
-    PinControl::static_edit_status_pin("test", true, 1, false);
-    delay(5000);
-    PinControl::static_edit_status_pin("test", false, 1, false);
-  }
-}
+
 
 void PinControl::static_edit_status_pin(String key, bool status_pin, int now_priority, bool save_priority){
       if (dig_pins.find(key) != dig_pins.end()){
@@ -739,3 +814,23 @@ void PinControl::static_edit_status_pin(String key, bool status_pin, int now_pri
       }
     }
 
+void ActivateWork::standart_activation_func(String key_n){
+  if (sensors_val.find(key_senser) !=  sensors_val.end()){
+    if (sensors_val.find(key_senser)->second.value <= low_level){
+      PinControl::static_edit_status_pin(key_n, true, 1, true);
+    }
+    else if (sensors_val.find(key_senser)->second.value >= how_func){
+      PinControl::static_edit_status_pin(key_n, false, 1, true);
+    }
+  }    
+}
+
+
+void ActivateWork::test_activ_func(){
+      String key = "simple";
+      Serial.println("-------------------------start 13");
+      PinControl::static_edit_status_pin("test", true, 1, false);
+      delay(3000);
+      PinControl::static_edit_status_pin("test", false, 1, false);
+      Serial.println("----------------------------end 13");
+    }

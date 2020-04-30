@@ -1,0 +1,8 @@
+[Unit]
+Description=On-boot script launch servise
+
+[Service]
+ExecStart=/home/pi/auto_start_file.sh
+
+[Install]
+WantedBy=multi-user.target

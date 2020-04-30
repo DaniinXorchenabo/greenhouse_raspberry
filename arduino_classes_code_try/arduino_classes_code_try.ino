@@ -13,11 +13,13 @@ DHT dht(7, DHT11);
 SoftwareSerial raspb(53, 51);
 SoftwareSerial blut(52,50);
 
-#define POLIV_DELAY 5000
+int POLIV_DELAY = 5000;
+int8_t VAPOR_ACTIVATION_LEVLE = 60;
+int8_t VAPOR_DISACTIVATION_LEVLE = VAPOR_ACTIVATION_LEVLE + 20;
 
 class PinControl{
   public:
-    int pin;
+    int8_t pin = 43;
     boolean pin_mode_l = LOW;
     boolean now_pin_mode;
     
@@ -38,6 +40,8 @@ class PinControl{
     }
 
     PinControl(){}
+
+    static void static_edit_status_pin(String key, bool status_pin, int now_priority, bool save_priority);
     
     void edit_status_pin(bool status_pin){//постановка статуса пина
       edit_status_pin(status_pin, 1, false);
@@ -226,7 +230,7 @@ class AnalogReadPin{
     private:
       bool DHT_flag = false;
       bool how_param = false;
-      int pin;
+      int8_t pin;
       DHT *dht;
       
       int pin_analogRead(){
@@ -354,7 +358,7 @@ class EspControl{
     String generate_answer(){
       String answer;
       if (dig_pins.find("fitoLed") != dig_pins.end()){
-        answer = "/" + (String)dig_pins["fitoLed"].get_filling_pin();
+        answer = "/" + (String)dig_pins.find("fitoLed")->second.get_filling_pin();
         answer = answer + answer + "/";
       } else {
         answer = "/no_date/no_date/";
@@ -365,13 +369,13 @@ class EspControl{
 
     float return_sensor_val(String key){
       if (sensors_val.find(key) != sensors_val.end()){
-        return sensors_val[key].value;
+        return sensors_val.find(key)->second.value;
       }
       return 0.0;
     }
 
     void esp_write(String send_data){
-      //Serial3.println(send_data);
+      Serial3.println(send_data);
     }
     
     //=======! прием данных с ESP !=======
@@ -619,7 +623,9 @@ void setup(){
   //dht.begin();
   Serial.begin(9600);
 Serial.println("^trtr");
-
+Serial.println(VAPOR_ACTIVATION_LEVLE);
+VAPOR_ACTIVATION_LEVLE = 40;
+Serial.println(VAPOR_ACTIVATION_LEVLE);
  // test = (sens_val_strucr){700, AnalogReadPin(0)};
   
   dig_pins["whiteLed"] = PinControl(9);
@@ -627,7 +633,7 @@ Serial.println("^trtr");
 
   
   //dig_pins["air"] = PinControl(30);
-  dig_pins["fan_air"] = PinControl(33);
+  //dig_pins["fan_air"] = PinControl(33);
   dig_pins["vapor"] = PinControl(30);
   dig_pins["fan_root"] = PinControl(28);//4
   dig_pins["fan_vapor"] = PinControl(26);
@@ -662,11 +668,9 @@ dig_pins.find("test")->second.set_priority(5);//11405
 //dig_pins.find("test")->second.set_priority(0);//11400
 dig_pins.find("test")->second.set_priority(35);//15405
 */
-dig_pins.find("fan_air")->second.edit_status_pin(true);
-dig_pins.find("fan_vapor")->second.edit_status_pin(true);
-delay(1000);
-dig_pins.find("fan_air")->second.edit_status_pin(false);
-dig_pins.find("fan_vapor")->second.edit_status_pin(false);
+PinControl::static_edit_status_pin("test", true, 1, false);
+delay(10000);
+PinControl::static_edit_status_pin("test", false, 1, false);
 }
 
 
@@ -678,7 +682,7 @@ void loop(){
   espControl.update_esp();
   update_sensors_value();
   delay(500);
-  Serial.println("looping.....");
+  //Serial.println("looping.....");
   
   if (Serial.available() > 0) {   
     serial_data = (String)Serial.readString();//если есть доступные данные c блютуз 
@@ -699,6 +703,22 @@ void update_sensors_value(){
   for(auto it = sensors_val.begin(); it != sensors_val.end(); ++it){
     //sensors_val[(String)it->first].value = it->second.cls.get_value();
     it->second.value = it->second.cls.get_value();
+    Serial.print(String(it->first) + " " + String(it->second.value) + "\t");
   }
+  Serial.println();
 }
+
+void vapor_activation_func(String key){
+  if (sensors_val.find("hum") !=  sensors_val.end()){
+    if (sensors_val.find("hum")->second.value <= VAPOR_ACTIVATION_LEVLE){
+      PinControl::static_edit_status_pin(key, true, 1, true);
+    }
+  }    
+}
+
+void PinControl::static_edit_status_pin(String key, bool status_pin, int now_priority, bool save_priority){
+      if (dig_pins.find(key) != dig_pins.end()){
+          dig_pins.find(key)->second.edit_status_pin(status_pin, now_priority, save_priority);
+      }
+    }
 

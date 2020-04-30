@@ -36,7 +36,8 @@ try:
     give_neiro = NeiroCetGiveImage(adres, port, 60 * 10,
                                    send_for_Arduino,
                                    protect_for_yellow,
-                                   name="give_neiro")
+                                   name="give_neiro",
+                                   debag=True)
     give_neiro.start()
 except Exception as e:
     print("передача фоток на сервер не стартовала, из-за отсутствия IP,", e)

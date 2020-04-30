@@ -48,7 +48,7 @@ class ProSoket():
     def sohet_priem(self, d):
         if self.no_error_sending:
             sleep(10)
-            self.prnt('прием')
+            self.prnt('прием ответа начат...')
             self.prnt("адрес и айпи", (self.adres, self.port))
             sock = socket.socket()
             self.prnt(4.2)
@@ -58,7 +58,7 @@ class ProSoket():
             self.prnt(4.4)
             otvet = sock.recv(4096)
             data_arr = pickle.loads(otvet)
-            self.prnt('принял')
+            self.prnt('принял ответ')
             self.prnt('Received', repr(otvet))
             self.prnt(data_arr)
             self.clas_UNO.flovers_yes_or_no = data_arr[0]

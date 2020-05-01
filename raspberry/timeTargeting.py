@@ -44,7 +44,7 @@ class HowLong(threading.Thread):
         self.live_potok = True
         self.time_f = 0
         self.debag = debag
-        self.days, self.hours, self.minuts = butiful_time(time() - self.start_time, \
+        self.days, self.hours, self.minuts = butiful_time(time() - self.start_time,
                                                           d=self.days,
                                                           h=self.hours,
                                                           m=self.minuts)

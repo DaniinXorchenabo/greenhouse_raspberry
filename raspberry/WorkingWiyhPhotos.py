@@ -18,7 +18,6 @@ class ProSoket():
     def __init__(self, adres, port, clas_UNO, debag=False, name="ProSoket"):
         self.clas_UNO = clas_UNO
         self.adres, self.port = adres, port
-        self.debag = debag
         self.prnt = lambda *cont: fixprint(*cont, test=debag, class_name=name)
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.no_error_sending = True
@@ -34,8 +33,8 @@ class ProSoket():
             sock = socket.socket()
             fixprint(4.1)
             self.prnt("адрес и айпи", (self.adres, self.port))
-            sock.connect((self.adres, self.port))
             data = pickle.dumps(img)
+            sock.connect((self.adres, self.port))
             self.prnt('отправляю')
             sock.sendall(data)
             self.prnt("отправил")
@@ -57,12 +56,12 @@ class ProSoket():
             sock.sendall(b'give_me')
             self.prnt(4.4)
             otvet = sock.recv(4096)
+            sock.close()
             data_arr = pickle.loads(otvet)
             self.prnt('принял ответ')
             self.prnt('Received', repr(otvet))
             self.prnt(data_arr)
             self.clas_UNO.flovers_yes_or_no = data_arr[0]
-            sock.close()
 
 
 class ProtectForYellow(threading.Thread):
@@ -143,42 +142,39 @@ class NeiroCetGiveImage(threading.Thread):
         self.sok = ProSoket(adres, port, self.clas_UNO)
         threading.Thread.__init__(self)
         self.interval = interval
-        self.debag = debag
         self.prnt = lambda *cont: fixprint(*cont, test=debag, class_name=name)
 
     def run(self):
         self.heating_cam()
         while True:
             if 1 == 1:  # try:
-                try:
-                    cap = cv2.VideoCapture(0)
-                except Exception:
-                    try:
-                        cap = cv2.VideoCapture(-1)
-                    except Exception:
-                        cap = cv2.VideoCapture(0)
+                cap = self.find_cam()
+                if not cap:
+                    sleep(self.interval)
+                    continue
                 ret, frame = cap.read()
+                cap.release()
                 self.class_find_yellow.img = frame
                 self.class_find_yellow.comand_find_yellow = True
                 self.prnt('считал с камеры')
-                cap.release()
                 cv2.imwrite('kostil.jpg', frame)
                 self.prnt(2)
                 try:
                     frame1 = Image.open('kostil.jpg')
                     frame2 = Image.open('kostil.jpg')
-                except Exception:
-                    print('ошибка при чтении файла kostil.jpg\nпопытка исправить..')
+                except Exception as e:
+                    print('ошибка при чтении файла kostil.jpg\nпопытка исправить..', e)
                     frame1 = Image.open('kostil2.jpg')
                     frame2 = Image.open('kostil2.jpg')
                 self.prnt(2.1)
                 im1, im2 = frame1, frame2.transpose(Image.ROTATE_180)
                 w_old, h_old = im1.size
                 self.prnt(2.2)
-                min_sixe, max_size = (w_old, h_old) if w_old < h_old else (h_old, w_old)
-                self.prnt(2.3, 'sixe =', min_sixe, max_size)
-                im1 = im1.crop((0, 0, 480, 480))
+                min_sixe, max_size = sorted([w_old, h_old])
+                self.prnt(f'images size = {min_sixe}, {max_size}')
+                im1 = im1.crop((0, 0, min_sixe, min_sixe))
                 im2 = im2.crop((0, 0, min_sixe, min_sixe))  # .transpose(Image.ROTATE_180)
+                im2 = im2.transpose(Image.ROTATE_180)
                 self.prnt(2.4, im1.size, im2.size)
                 im1 = im1.resize((150, 150), Image.ANTIALIAS)
                 im2 = im2.resize((150, 150), Image.ANTIALIAS)
@@ -193,7 +189,7 @@ class NeiroCetGiveImage(threading.Thread):
                 for i in ['kostil2_1.jpg', 'kostil2_2.jpg']:
                     f1 = open(i, "rb")
                     ff1 = f1.read()
-                    self.prnt(3)
+                    self.prnt("отправка картинки", i)
                     self.sok.soket_otpravka(ff1)
                     f1.close()
                 self.sok.sohet_priem(1)
@@ -215,19 +211,29 @@ class NeiroCetGiveImage(threading.Thread):
 
     @staticmethod
     def heating_cam():
-        # cv2.namedWindow("frame")  # создаем главное окно
+        cap = NeiroCetGiveImage.find_cam()
+        if cap:
+            print('камера подключена')
+            for i in range(30):
+                cap.read()
+            cap.release()
+            print('камера прогрета')
+        else:
+            print('камера не прогрета')
+
+    @staticmethod
+    def find_cam():
         try:
             cap = cv2.VideoCapture(0)
         except Exception:
             try:
                 cap = cv2.VideoCapture(-1)
             except Exception:
-                cap = cv2.VideoCapture(0)
-        print('камера подключена')
-        for i in range(30):
-            cap.read()
-        cap.release()
-        print('камера прогрета')
+                try:
+                    cap = cv2.VideoCapture(1)
+                except Exception:
+                    cap = None
+        return cap
 
 
 def obrezka_do_razmer(image, inp, out, w, h):

@@ -13,7 +13,7 @@ DHT dht(7, DHT11);
 SoftwareSerial raspb(53, 51);
 SoftwareSerial blut(52,50);
 
-int POLIV_DELAY = 5000;
+int POLIV_DELAY = 10000;
 int POLIV_LOW_LEVEL = 30;
 int8_t VAPOR_ACTIVATION_LEVLE = 60;
 int8_t VAPOR_DISACTIVATION_LEVLE = VAPOR_ACTIVATION_LEVLE + 20;
@@ -235,7 +235,7 @@ class PinControl{
     bool pin_write_priority(boolean pin_mod, int now_priority, bool save_priority, bool isworking){
       //now_priority = |номер ячейки в строке| значение этой ячейки|
       if (levle_priority(now_priority)){
-        Serial.print("now_priority >= priority " + String(pin) + "\t");
+        //Serial.print("now_priority >= priority " + String(pin) + "\t");
         if (isworking){
           pin_write(pin_mod);
         }
@@ -245,9 +245,9 @@ class PinControl{
     }
     
     void pin_write(boolean pin_mod){
-      Serial.println("pin_write, if " +(String)now_pin_mode + " != " + (String)pin_mod);
+      //Serial.println("pin_write, if " +(String)now_pin_mode + " != " + (String)pin_mod);
       if (now_pin_mode != pin_mod){
-        Serial.println("if pin_write " + (String)pin + " " + (String)pin_mod);
+        //Serial.println("if pin_write " + (String)pin + " " + (String)pin_mod);
         digitalWrite(pin, pin_mod);
         now_pin_mode = pin_mod;
       }
@@ -289,6 +289,12 @@ class AnalogReadPin{
   public:
 
     AnalogReadPin(){}
+
+    AnalogReadPin(int pin_now, bool def_n){
+      pin = pin_now;
+      def = def_n;
+      pinMode(pin, INPUT);
+    }
     
     AnalogReadPin(int pin_now){
       pin = pin_now;
@@ -296,11 +302,13 @@ class AnalogReadPin{
     }
 
     AnalogReadPin(DHT &dht_new, String param_dht){
+      Serial.println("===8=0=9==-0=");
       *dht = dht_new;
       if (param_dht == "t"){
         how_param = true;
+      } else {
+        how_param = false;
       }
-      how_param = param_dht;
       DHT_flag = true;
     }
 
@@ -319,19 +327,31 @@ class AnalogReadPin{
     private:
       bool DHT_flag = false;
       bool how_param = false;
+      bool def = false;
       int8_t pin;
       DHT *dht;
       
       int pin_analogRead(){
+        if (def){
+          return (int)-1;
+        }
         return (int)analogRead(pin);
       }
 
       int return_temperature(){
-        return (int)dht->readTemperature();
+        int data = (int)dht->readTemperature();
+        if (data != 0){
+          return data;
+        }
+        return (int)-1;
       }
 
       int return_humid(){
-        return (int)dht->readHumidity();
+        int data = (int)dht->readHumidity();
+        if (data != 0){
+          return data;
+        }
+        return (int)-1;
       }
 };
 
@@ -351,28 +371,52 @@ class RaspberryPiControl{
     RaspberryPiControl(SoftwareSerial &ras){
       raspb = &ras;
       raspb->begin(9600);
+      write_raspb("I started (uno)");
     }
     
     void raspb_update(){
       over_read_raspb();
+      regular_send();
     }
         
 
   private:
     String new_str_raspb = "";
     String str_raspb = "";
+    unsigned long time_turn_on;
+
+    
     
     //=======! чтение с распберри !=======
     void over_read_raspb(){ // считывается строка, полученная с разбери
-      String raspb_data = read_raspb();
-      if (raspb_data != ""){
-        data_processing(raspb_data); 
+      while (raspb->available() > 0){
+        String raspb_data = read_raspb();
+        if (raspb_data != ""){
+          raspb_data.trim();
+          data_processing(raspb_data); 
+        }
       }
     }
     
     String read_raspb(){
+      Serial.print("-");
+      
+      if (!raspb->isListening()){
+        bool useless = raspb->listen();
+      }
+      
       if (raspb->available()){
-        return (String)raspb->readString();
+        Serial.println("разбери что-то прислал...");
+        String data = "";
+        data = raspb->readString();
+        /* 
+        while (raspb->available() > 0){
+          data += (String)raspb->peek();
+          if (raspb->read() == '\n'){break;}
+        }*/
+        //delay(50);
+        Serial.println("raspb_get: " + data);
+        return data;
       }
       return "";
     }
@@ -380,6 +424,7 @@ class RaspberryPiControl{
     //=======! Обработка полученных данных !=======
     void data_processing(String str){ // обработка строки
       write_raspb("I get: " + str);
+      Serial.println("Получил от разбери: " + str);
       str_raspb = str;
       if (str == "WhiteLedHIGH"){ 
         if (dig_pins.find("whiteLed") != dig_pins.end()){
@@ -415,8 +460,16 @@ class RaspberryPiControl{
     }
 
     //=======! отправление данеых !=======
+    void regular_send(){
+      if (millis() - time_turn_on > 2000){
+        time_turn_on = millis();
+        write_raspb("something");
+      }
+    }
+    
     void write_raspb(String text){
       raspb->println(text);
+      time_turn_on = millis();
     }
 
 };
@@ -425,7 +478,10 @@ RaspberryPiControl rasClass(raspb);
 class EspControl{
   public:
   
-    EspControl(){}
+    EspControl(){
+      Serial3.begin(9600); //115200
+      Serial3.flush();
+    }
     
     void update_esp(){
       regular_send(); //отправка данных на esp
@@ -452,18 +508,19 @@ class EspControl{
       } else {
         answer = "/no_date/no_date/";
       }
-      answer += "/" + (String)return_sensor_val("temp") + "/" + (String)return_sensor_val("hum") + answer;
+      answer = "/" + (String)(int)return_sensor_val("temp") + "/" + (String)(int)return_sensor_val("hum") + answer;
       return answer + "3/";
     }
 
-    float return_sensor_val(String key){
+    int return_sensor_val(String key){
       if (sensors_val.find(key) != sensors_val.end()){
-        return sensors_val.find(key)->second.value;
+        return (int)sensors_val.find(key)->second.value;
       }
-      return 0.0;
+      return 0;
     }
 
     void esp_write(String send_data){
+      Serial.println("send to esp: " + send_data);
       Serial3.println(send_data);
     }
     
@@ -471,7 +528,11 @@ class EspControl{
 
     void over_read(){
       String new_str = esp_read();
+      Serial.println("-=-=-="+new_str);
       if (new_str != ""){
+        new_str += "---";
+        new_str  = new_str.substring(0, 1);
+        Serial.println("esp get^ " + new_str);
         data_processing(new_str);
       }
     }
@@ -480,18 +541,18 @@ class EspControl{
 
       if (priem_c_ESP_str == "3") {//свет включить
         if (dig_pins.find("fitoLed") != dig_pins.end()){
-          dig_pins["fitoLed"].edit_status_pin(true, 31, true);
+          dig_pins.find("fitoLed")->second.edit_status_pin(true, 31, true);
         }
       }
       if (priem_c_ESP_str == "2") {//свет выключить
         if (dig_pins.find("fitoLed") != dig_pins.end()){
-          dig_pins["fitoLed"].edit_status_pin(false, 31, true);
+          dig_pins.find("fitoLed")->second.edit_status_pin(false, 31, true);
         }
       }
       if (priem_c_ESP_str == "7") {/*digitalWrite(40,HIGH);   reset_esp = 1;*/} //resrt
       if (priem_c_ESP_str == "4") {  //полив
         if (dig_pins.find("poliv") != dig_pins.end()){
-          dig_pins["poliv"].turn_on_for_time(POLIV_DELAY, 31);
+          dig_pins.find("poliv")->second.turn_on_for_time(POLIV_DELAY, 31);
         }
       } 
       if (priem_c_ESP_str == "5") {} //включить авто
@@ -505,8 +566,12 @@ class EspControl{
     }
  
     String esp_read(){
-      if (Serial3.available()){
-        return Serial3.readString();
+      if (Serial3.available() > 0){
+        Serial3.setTimeout(50);
+        String data = (String)Serial3.readString();
+        delay(5);
+        Serial3.flush();
+        return data;
       }
       return "";
     }
@@ -546,8 +611,10 @@ class Bluetooth{
     }
 
     String blut_read(){
+      //blut->listen();
       if (blut->available()){
-        return (String)blut->readString();
+        String date = (String)blut->readString();
+        return date;
       }
       return "";
     }
@@ -705,7 +772,7 @@ class Bluetooth{
 */
 
 EspControl espControl;
-Bluetooth bluetooth(blut);
+//Bluetooth bluetooth(blut);
 
 ActivateWork activate_vapor("vapor", "hum", VAPOR_ACTIVATION_LEVLE, VAPOR_DISACTIVATION_LEVLE, 1); //и для испарителя и для его вентилятора
 ActivateWork activate_root_fan("fan_root", "gas", GAS_DISACTIVATION_LEVLE, GAS_ACTIVATION_LEVLE, 2);
@@ -717,12 +784,14 @@ ActivateWork activate_test("test", "test", 1, 2, 100);
 String serial_data = "";
 void setup(){
   //dht.begin();
+
   Serial.begin(9600);
+  dht.begin();
   Serial.println("^trtr");
-  Serial.println(activate_test.how_func);
+  Serial.println("free memory: " + (String)memoryFree());
   
-  dig_pins["whiteLed"] = PinControl(9);
-  dig_pins["fitoLed"] = PinControl(10);
+  dig_pins["whiteLed"] = PinControl(8, LOW);
+  dig_pins["fitoLed"] = PinControl(9, LOW);
 
   
   //dig_pins["air"] = PinControl(30);
@@ -734,13 +803,16 @@ void setup(){
   
   dig_pins["test"] = PinControl(13, (boolean)LOW); //, activate_test
 
-
-  sensors_val["temp"] = (sens_val_strucr){23, AnalogReadPin(dht, "t")};
-  sensors_val["hum"] = (sens_val_strucr){70, AnalogReadPin(dht, "h")};
-  sensors_val["gas"] = (sens_val_strucr){5, AnalogReadPin(1)};
-  sensors_val["level_poliv"] = (sens_val_strucr){500, AnalogReadPin(0)};
+  Serial.println("000");
+  sensors_val["temp"] = (sens_val_strucr){23, AnalogReadPin(dht, (String)"t")};
+  Serial.println("000");
+  sensors_val["hum"] = (sens_val_strucr){70, AnalogReadPin(dht, (String)"h")};
+  Serial.println("000");
+  sensors_val["gas"] = (sens_val_strucr){5, AnalogReadPin(0, true)};
+  Serial.println("000");
+  sensors_val["level_poliv"] = (sens_val_strucr){500, AnalogReadPin(1)};
   sensors_val["level_vapor"] = (sens_val_strucr){500, AnalogReadPin(2)};
-  sensors_val["root_hum"] = (sens_val_strucr){100, AnalogReadPin(3)};
+  sensors_val["root_hum"] = (sens_val_strucr){80, AnalogReadPin(3, true)};
   /*
   Serial.println("rtrtr ");
   //rasClass.test();
@@ -762,6 +834,11 @@ dig_pins.find("test")->second.set_priority(5);//11405
 dig_pins.find("test")->second.set_priority(35);//15405
 */
 
+//
+dig_pins["fitoLed"].edit_status_pin(true);
+dig_pins["whiteLed"].edit_status_pin(false);
+//dig_pins["poliv"].edit_status_pin(false, 39, true);
+Serial.println("free memory: " + (String)memoryFree());
 }
 
 
@@ -769,16 +846,11 @@ void loop(){
     
   update_pin();
   rasClass.raspb_update();
-  bluetooth.update_blut();
+  //bluetooth.update_blut();
   espControl.update_esp();
   update_sensors_value();
-  delay(3000);
-  //Serial.println("looping.....");
+  delay(500);
   
-  if (Serial.available() > 0) {   
-    serial_data = (String)Serial.readString();//если есть доступные данные c блютуз 
-    bluetooth.test(serial_data); 
-  }
 }
 
 void update_pin(){
@@ -791,9 +863,12 @@ void update_pin(){
 
 
 void update_sensors_value(){
+  int data;
   for(auto it = sensors_val.begin(); it != sensors_val.end(); ++it){
-    //sensors_val[(String)it->first].value = it->second.cls.get_value();
-    it->second.value = it->second.cls.get_value();
+    data = (int)it->second.cls.get_value();
+    if (data != -1){
+      it->second.value = (float)data;
+    }
     Serial.print(String(it->first) + " " + String(it->second.value) + "\t");
   }
   Serial.println();
@@ -817,9 +892,9 @@ void vapor_activation_func(){ // String key, String sensor_key, int low_level, i
 
 void PinControl::static_edit_status_pin(String key, bool status_pin, int now_priority, bool save_priority){
   if (dig_pins.find(key) != dig_pins.end()){
-    Serial.print((String)key + ":\t");
+    //Serial.print((String)key + ":\t");
     if (key.length() < 7){
-      Serial.print("\t");
+      //Serial.print("\t");
     }
     dig_pins.find(key)->second.edit_status_pin(status_pin, now_priority, save_priority);
 
@@ -872,3 +947,14 @@ void ActivateWork::test_activ_func(){
   Serial.println("----------------------------end 13");
 }
 
+extern int __bss_end;
+extern void *__brkval;
+// Функция, возвращающая количество свободного ОЗУ
+int memoryFree() { // from: https://alexgyver.ru/lessons/code-optimisation/
+  int freeValue;
+  if ((int)__brkval == 0)
+    freeValue = ((int)&freeValue) - ((int)&__bss_end);
+  else
+    freeValue = ((int)&freeValue) - ((int)__brkval);
+  return freeValue;
+}

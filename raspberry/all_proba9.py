@@ -17,7 +17,7 @@ send_for_Arduino.start()
 
 led2 = ManipulationClass(send_for_Arduino,
                          ['WhiteLedHIGH', 'WhiteLedLOW'],
-                         [2 * 3600, 4 * 3600],
+                         [60, 60],
                          name='led2')
 poliv_class = ManipulationClass(send_for_Arduino,
                                 ['polivHIGH'],
@@ -36,8 +36,7 @@ try:
     give_neiro = NeiroCetGiveImage(adres, port, 60 * 10,
                                    send_for_Arduino,
                                    protect_for_yellow,
-                                   name="give_neiro",
-                                   debag=True)
+                                   name="give_neiro")
     give_neiro.start()
 except Exception as e:
     print("передача фоток на сервер не стартовала, из-за отсутствия IP,", e)

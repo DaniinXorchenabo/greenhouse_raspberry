@@ -81,6 +81,7 @@ class ProtectForYellow(threading.Thread):
         while True:
             if self.comand_find_yellow:
                 self.comand_find_yellow = False
+            sleep(30)
 
     def opredelenie(self):
         if self.img:
@@ -171,7 +172,7 @@ class NeiroCetGiveImage(threading.Thread):
                 w_old, h_old = im1.size
                 self.prnt(2.2)
                 min_sixe, max_size = sorted([w_old, h_old])
-                self.prnt(f'images size = {min_sixe}, {max_size}')
+                self.prnt('images size =', min_sixe, max_size)
                 im1 = im1.crop((0, 0, min_sixe, min_sixe))
                 im2 = im2.crop((0, 0, min_sixe, min_sixe))  # .transpose(Image.ROTATE_180)
                 im2 = im2.transpose(Image.ROTATE_180)

@@ -38,8 +38,8 @@ class ManipulationClass(threading.Thread):
                 # ждем нуное время, потом подаём обратный сигнал на выключение
                 self.time_f = int(time())
 
-            fixprint(f'времени с прошлого {self.ckass_name} прошло {time() - self.time_f}' + \
-                     f'интервалы сейчас: {now_signal}', test=self.debag)
+            fixprint("времени с прошлого %s прошло %s интервалы сейчас: %s" % (
+                self.ckass_name, now_signal, time() - self.time_f), test=self.debag)
             sleep(self.interval_updates)
 
 
@@ -91,7 +91,7 @@ class ContactWithArd(threading.Thread):
                 self.is_good_send_set -= set([ard_input[7:]])
             send = self.get_send_from_iter()
             if send:  # если отправка
-                self.prnt(f"начинаю отправлять данные {send}...", end=' ')
+                self.prnt("начинаю отправлять данные", send, "...", end=' ')
                 self.is_good_send_set.add(str(send))
                 formating = bytes(str(send) + '\r\n', encoding='utf-8')
                 self.prnt("отправил строку УНЕ", formating, end=' ')

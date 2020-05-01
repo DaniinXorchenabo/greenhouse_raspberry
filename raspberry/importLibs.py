@@ -1,3 +1,7 @@
+from sys import getdefaultencoding
+
+getdefaultencoding()  # utf-8
+
 from random import shuffle
 
 
@@ -34,9 +38,9 @@ import sys
 
 fixedBags = [True]
 fix_func = lambda *a, test=fixedBags: print(*(str(i) for i in a)) if test[0] else a
-fixprint = lambda *a, test=False, class_name='': \
+fixprint = lambda *a, test=False, class_name='', **kwargs: \
     print(("поток " + str(class_name) + ":" \
-               if class_name != "" else ""), *(str(i) for i in a)) if test else ""
+               if class_name != "" else ""), *(str(i) for i in a), **kwargs) if test else ""
 
 try:
     from serial import Serial, SerialException

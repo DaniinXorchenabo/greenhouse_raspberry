@@ -9,6 +9,7 @@ programm_time = HowLong(30, time(), *wath_start_time(),
                         debag=True,
                         name="programm_time")
 programm_time.start()
+
 data_pros_ard = DataProcessingForArduino(name="data_pros_ard")
 send_for_Arduino = ContactWithArd(pros_ard=data_pros_ard,
                                   name="send_for_Arduino",
@@ -16,8 +17,8 @@ send_for_Arduino = ContactWithArd(pros_ard=data_pros_ard,
 send_for_Arduino.start()
 
 led2 = ManipulationClass(send_for_Arduino,
-                         ['WhiteLedHIGH', 'WhiteLedLOW'],
-                         [60, 60],
+                         ['fitoLedHIGH', 'fitoLedLOW'],
+                         [3600 * 3, 3600 * 1],
                          name='led2')
 poliv_class = ManipulationClass(send_for_Arduino,
                                 ['polivHIGH'],
@@ -30,10 +31,8 @@ protect_for_yellow = ProtectForYellow(0, name="protect_for_yellow")
 protect_for_yellow.start()
 
 print('сейчас будет попытка в передачу фотографий')
-adres, port = read_IP_setver_for_text_file()
-# input('введите адрес сервера (при запуске сервера он печатается)\nв виде: 192.168.0.0\n')
 try:
-    give_neiro = NeiroCetGiveImage(adres, port, 60 * 10,
+    give_neiro = NeiroCetGiveImage(*read_IP_setver_for_text_file(), 60 * 10,
                                    send_for_Arduino,
                                    protect_for_yellow,
                                    name="give_neiro")

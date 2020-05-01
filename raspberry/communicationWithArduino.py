@@ -31,14 +31,15 @@ class ManipulationClass(threading.Thread):
         self.uno_class.send_to_port(now_signal)
         while self.live_potok:
             if int(time()) - self.time_f - 1 >= now_interval:
-                fixprint("Вроде отправка", now_signal, test=self.debag)
-                self.uno_class.send_to_port(now_signal)  # дем нуное время, потом подаём обратный сигнал на выключение
-                self.time_f = int(time())
                 now_signal = next(self.signals)
                 now_interval = next(self.intervals)
-            fixprint('времени с прошлого', self.ckass_name,
-                        'прошло', time() - self.time_f,
-                        'интервалы сейчас:', now_signal, test=self.debag)
+                fixprint("Вроде отправка", now_signal, test=self.debag)
+                self.uno_class.send_to_port(now_signal)
+                # ждем нуное время, потом подаём обратный сигнал на выключение
+                self.time_f = int(time())
+
+            fixprint(f'времени с прошлого {self.ckass_name} прошло {time() - self.time_f}' + \
+                     f'интервалы сейчас: {now_signal}', test=self.debag)
             sleep(self.interval_updates)
 
 
@@ -49,7 +50,7 @@ class ContactWithArd(threading.Thread):
         threading.Thread.__init__(self)
         self.debag = debag
         self.pros_ard = pros_ard
-        self.prnt = lambda *cont: fixprint(*cont, test=debag, class_name=name)
+        self.prnt = lambda *cont, **kwargs: fixprint(*cont, test=debag, class_name=name, **kwargs)
         ports = ['/dev/ttyACM0', '/dev/ttyACM1',
                  '/dev/ttyACM2', '/dev/ttyUSB0',
                  '/dev/ttyUSB1']
@@ -62,49 +63,45 @@ class ContactWithArd(threading.Thread):
             except Exception:
                 pass
         self.working_ports = list(set(self.working_ports + serial_ports()))
-        print("поток", name + ": рабочие порты -", self.working_ports)
+        self.prnt("поток", name + ": рабочие порты -", self.working_ports)
         self.ard_port = self.working_ports[0] if bool(self.working_ports) else "some_port"
         self.speed_port = 9600
         try:
             self.ser = Serial(self.ard_port, self.speed_port)
         except SerialException as e:
             self.ser = TrySerial(self.ard_port, self.speed_port)
+            self.prnt = lambda *cont, **kwargs: fixprint(*cont, test=debag, class_name=name + " (без соединения)", **kwargs)
         self.daemon = True
         self.flovers_yes_or_no = 'no'
         self.dengerous = False
         self.live_potok = True
-        self.send = iter(["i_started"])
+        self.send = iter(["raspb_started"])
         self.is_good_send_set = set()
 
     def run(self):
-        print('отправка на уну жива')
+        self.prnt('отправка на уну жива')
         formating = bytes(str("i_started") + '\r\n', encoding='utf-8')
         self.ser.write(formating)
-            
-        print("hello, UNO")
-        while self.live_potok:
-            print("цикл отправки пошел с начала")
-            ard_input = self.ser.readline()
-            try:
-                ard_input = ard_input.decode().strip()
-            except UnicodeDecodeError as e:
-                print("не смог раскодировать строчку, присланную ардуиной")
 
+        self.prnt("hello, UNO")
+        while self.live_potok:
+            self.prnt("цикл отправки пошел с начала")
+            ard_input = self.decode_answ(self.ser.readline())
             if "I get: " == ard_input[:7]:
                 self.is_good_send_set -= set([ard_input[7:]])
             send = self.get_send_from_iter()
-            print("нашел данные для отправки", send)
-            if send and send == "WhiteLedHIGH":
-                send += ''
-            if send: #  если отправка
-                print("начинаю отправлять данные")
+            if send:  # если отправка
+                self.prnt(f"начинаю отправлять данные {send}...", end=' ')
                 self.is_good_send_set.add(str(send))
                 formating = bytes(str(send) + '\r\n', encoding='utf-8')
-                self.prnt("отправил строку УНЕ", formating)
-                self.ser.write(formating)
-                print("заеончил отправку")
+                self.prnt("отправил строку УНЕ", formating, end=' ')
+                try:
+                    self.ser.write(formating)
+                    self.prnt("закончил отправку")
+                except Exception as e:
+                    self.prnt("прошла с ошибкой: ", e)
             self.prnt("получил строку от UNO", ard_input)
-            #self.pros_ard.new_str(ard_input)
+            # self.pros_ard.new_str(ard_input)
 
     def send_to_port(self, text):
         self.send = chain(iter([text]), self.send)
@@ -119,6 +116,20 @@ class ContactWithArd(threading.Thread):
                 return el
             return None
 
+    @staticmethod
+    def decode_answ(ans):
+        try:
+            ard_input = ans.decode().strip()
+        except UnicodeDecodeError as e:
+            try:
+                ard_input = ans.decode(encoding='utf-8', errors='1surrogatepass')
+            except UnicodeDecodeError as e:
+                try:
+                    ard_input = ans.decode(encoding='ascii', errors='1surrogatepass')
+                except UnicodeDecodeError as e:
+                    print("не смог раскодировать строчку, присланную ардуиной")
+                    ard_input = str(ans)
+        return ard_input
 
 class DataProcessingForArduino(threading.Thread):
 

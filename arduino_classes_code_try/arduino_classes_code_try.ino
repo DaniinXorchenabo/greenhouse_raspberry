@@ -19,6 +19,8 @@ int8_t VAPOR_ACTIVATION_LEVLE = 60;
 int8_t VAPOR_DISACTIVATION_LEVLE = VAPOR_ACTIVATION_LEVLE + 20;
 int8_t GAS_ACTIVATION_LEVLE = 40;
 int8_t GAS_DISACTIVATION_LEVLE = GAS_ACTIVATION_LEVLE - 15;
+int8_t TEMP_FAN_ACTIVATION_LEVLE = 26;
+int8_t TEMP_FAN_DISACTIVATION_LEVLE = TEMP_FAN_ACTIVATION_LEVLE - 2;
 
 class ActivateWork{
   public:
@@ -408,6 +410,7 @@ class RaspberryPiControl{
       if (raspb->available()){
         Serial.println("разбери что-то прислал...");
         String data = "";
+        raspb->setTimeout(50);
         data = raspb->readString();
         /* 
         while (raspb->available() > 0){
@@ -434,6 +437,16 @@ class RaspberryPiControl{
       else if (str == "WhiteLedLOW"){
         if (dig_pins.find("whiteLed") != dig_pins.end()){
           dig_pins.find("whiteLed")->second.edit_status_pin(false, 11, true);
+        }
+      }
+      else if (str == "fitoLedHIGH"){
+        if (dig_pins.find("fitoLed") != dig_pins.end()){
+          dig_pins.find("fitoLed")->second.edit_status_pin(true, 11, true);
+        }
+      }
+      else if (str == "fitoLedLOW"){
+        if (dig_pins.find("fitoLed") != dig_pins.end()){
+          dig_pins.find("fitoLed")->second.edit_status_pin(false, 11, true);
         }
       }
       else if (str == "polivHIGH"){
@@ -776,6 +789,7 @@ EspControl espControl;
 
 ActivateWork activate_vapor("vapor", "hum", VAPOR_ACTIVATION_LEVLE, VAPOR_DISACTIVATION_LEVLE, 1); //и для испарителя и для его вентилятора
 ActivateWork activate_root_fan("fan_root", "gas", GAS_DISACTIVATION_LEVLE, GAS_ACTIVATION_LEVLE, 2);
+ActivateWork activate_temp_fan("fan_air", "temp", TEMP_FAN_DISACTIVATION_LEVLE, TEMP_FAN_ACTIVATION_LEVLE, 2);
 ActivateWork activate_poliv("poliv", "root_hum", POLIV_LOW_LEVEL, 0, 3);
 ActivateWork activate_test("test", "test", 1, 2, 100);
 
@@ -795,7 +809,7 @@ void setup(){
 
   
   //dig_pins["air"] = PinControl(30);
-  //dig_pins["fan_air"] = PinControl(33);
+  dig_pins["fan_air"] = PinControl(33, activate_temp_fan);
   dig_pins["vapor"] = PinControl(30, activate_vapor);
   dig_pins["fan_root"] = PinControl(28, activate_root_fan);//4
   dig_pins["fan_vapor"] = PinControl(26, activate_vapor);
@@ -819,6 +833,7 @@ void setup(){
   Serial.println("rtrtr ");
   Serial.println(sensors_val["gas"].value);
   */
+  dig_pins.find("fan_air")->second.edit_status_pin(true);
 
 /*
 dig_pins.find("test")->second.set_priority(39);//19000
@@ -908,20 +923,20 @@ void PinControl::static_turn_on_for_time(String key, int delay_t_now, int now_pr
   }
 }
 
-void ActivateWork::standart_activation_func(String key_n){
+void ActivateWork::standart_activation_func(String key_n){ // 1
   if (sensors_val.find(key_senser) !=  sensors_val.end()){
     if (sensors_val.find(key_senser)->second.value <= low_level){
       PinControl::static_edit_status_pin(key_n, true, 0, true);
     }
-    else if (sensors_val.find(key_senser)->second.value >= how_func){
+    else if (sensors_val.find(key_senser)->second.value >= high_level){
       PinControl::static_edit_status_pin(key_n, false, 0, true);
     }
   }    
 }
 
-void ActivateWork::revers_standart_activation_func(String key_n){
+void ActivateWork::revers_standart_activation_func(String key_n){ // 2
   if (sensors_val.find(key_senser) !=  sensors_val.end()){
-    if (sensors_val.find(key_senser)->second.value >= how_func){
+    if (sensors_val.find(key_senser)->second.value >= high_level){
       PinControl::static_edit_status_pin(key_n, true, 0, true);
     }
     else if (sensors_val.find(key_senser)->second.value < low_level){
@@ -930,7 +945,7 @@ void ActivateWork::revers_standart_activation_func(String key_n){
   } 
 }
 
-void ActivateWork::poliv_activation_func(String key_n){
+void ActivateWork::poliv_activation_func(String key_n){ //3
   if (sensors_val.find(key_senser) !=  sensors_val.end()){
     if (sensors_val.find(key_senser)->second.value <= low_level){
       PinControl::static_turn_on_for_time(key_n, POLIV_DELAY, 0, false);
@@ -938,7 +953,7 @@ void ActivateWork::poliv_activation_func(String key_n){
   }
 }
 
-void ActivateWork::test_activ_func(){
+void ActivateWork::test_activ_func(){ // 100
   String key = "simple";
   Serial.println("-------------------------start 13");
   PinControl::static_edit_status_pin("test", true, 0, false);

@@ -79,13 +79,62 @@ class ActivateWork{
 };
 
 class PinControl{
-  public:
-    int8_t pin = 43;
-    boolean pin_mode_l = LOW;
-    boolean now_pin_mode = pin_mode_l;
-    //void (*activate_func_from_out)(String) = NULL;
-    ActivateWork *activate_work = NULL;
+  /*
+  коротко о проекте:
+      теплица, работающая по принципу аэропоники (корни в воздухе)
+      выращивает продукты с высоким содержанием витаминов (не будем в это углубляться)
+      в состав теплицы входят: 
+          куча датчиков и всяких реле
+          МК1 - микроконтроллер1 (Arduino Mega)
+          МК2 - микрокомпьютер2 (Raspberry Pi B3)
+          модуль Bluetooth 
+          модуль Wi-Fi (ESP8266-01)
+          сервер (один на великое множество теплиц)
+          Android-приложение
+          Web-сайт (сервер != Web-сайт)
+          
+      теплица может работать в автоматическом и ручном режимах
 
+      ручной режим имеет приоритет над автоматическим
+
+      приоритетность управляющих сигналов (какое устройство управляет теплицей)
+      - от более приоритетного к менее приоритетному
+          Web-сайт
+          Android-приложение
+          МК2
+          МК1 (если МК2 отсутствует в теплице, или связь с ним по каким-то причинам потеряна)
+
+      тут представлен код (фрагмент кода) для МК1
+      его роль, по сути сводится к получению и отправке на другие управляющие устройства показаний датчиков и
+      к получению и выполнению команд включения или выключения различных реле (включить отопление или выключить свет)
+      при всем этом МК1 может работать и самостоятельно.
+
+    О работе самого класса:
+        есть переменная int priority = 10000; 
+        каждый разряд (кроме первой 1) соответствует управляющему устройству
+        0 - если управляющее устройство на данный момент не управляет теплицей
+        1 - если управляет
+        (по всей видимости надо будет дороботать. 1 - управляет, но устройство выключено,
+        9 - управляет, устройство включено.
+        Промежуточные значения - возможность для ШИМ модуляции (к примеру, для освещения))
+        
+      Подобный подхот, по сути, позволяет теплице одновременно работать во всех режимах одновременно, 
+      Но физически теплица будет работать только в режиме с наивысшим приоритетом        
+
+        update_pin - метод, который постоянно будет крутиться в цикле работы
+        edit_status_pin - метод, позволяющий включить или выключить что-нибудь
+        turn_on_for_time - метод, позволяющий включить или выключить что-нибудь на заданное время
+        PWM_mode - метод, позволяющий использовать ШИМ для освещения
+  */
+  public:
+    int8_t pin = 43; //  к этому пину ничего не подключено
+    boolean pin_mode_l = LOW; // дело в том, что на некоторых реле низкий уровень включает нагрузку
+    boolean now_pin_mode = pin_mode_l; //изначально, при старте работы, нагрузка не включена
+    //void (*activate_func_from_out)(String) = NULL;
+    ActivateWork *activate_work = NULL; // это когда МК1 управляет работой теплицы,
+                                        // в переданном объекте содержится функция управления нагрузкой
+
+    // =======! Конструкторы !=======
     PinControl(int pin_now, ActivateWork &activate_work_n){ //конструктор класса , bool useless1, bool useless2 , void (*func)(String)
       //activate_func_from_out = func;
       activate_work = &activate_work_n;
@@ -106,8 +155,7 @@ class PinControl{
       
       pin_mode_l = pin_mode_now;
       starting(pin_now);
-    }
-    
+    }  
     PinControl(int pin_now, boolean pin_mode_now, int over_pin_fill){ //конструктор класса
       //over_pin_fill = over_pin_fill;
       pin_mode_l = pin_mode_now;
@@ -121,10 +169,9 @@ class PinControl{
       pin_mode_l = LOW;
       starting(pin_now);
     }
-
     PinControl(){}
     
-    void run_activation_func(String key){
+    void run_activation_func(String key){ // МК1 управляет теплицей
       if (activate_work != NULL){
         activate_work->activate_change_key(key);
       } else {
@@ -132,18 +179,18 @@ class PinControl{
       }
     }
 
+    //используется при управлении теплицей МК1
     static void static_edit_status_pin(String key, bool status_pin, int now_priority, bool save_priority);
 
+    //используется при управлении теплицей МК1
     static void static_turn_on_for_time(String key, int delay_t_now, int now_priority, bool save_priority);
     
     void edit_status_pin(bool status_pin){//постановка статуса пина
       edit_status_pin(status_pin, 1, false);
     }
-
     void edit_status_pin(bool status_pin, int now_priority){
       edit_status_pin(status_pin, now_priority, false);
     }
-    
     void edit_status_pin(bool status_pin, int now_priority, bool save_priority){ //постановка статуса пина
       if (status_pin){
         pin_write_priority(!pin_mode_l, now_priority, save_priority);
@@ -157,11 +204,9 @@ class PinControl{
       Serial.println("turn_on_for_time 1");
       turn_on_for_time(delay_t_now, 1, false);
     }
-    
     void turn_on_for_time(int delay_t_now, int now_priority){
       turn_on_for_time(delay_t_now, now_priority, false);
     }
-    
     void turn_on_for_time(int delay_t_now, int now_priority, bool save_priority){
       Serial.println("turn_on_for_time 3");
       
@@ -192,7 +237,8 @@ class PinControl{
     }
   
     void add_priority(int t){}
-    
+
+    // =======! Гетторы и Сетторы !=======
     void set_priority(int now_priority){
       if (now_priority < 40){
         int kostil = 0;
@@ -209,15 +255,12 @@ class PinControl{
         priority += kostil;
       }
     }
-
     int get_priority(){
       return priority;
     }
-    
     int get_filling_pin(){
       return pin_filling;
     }
-
     bool get_working_pin(){ // возвращает 1 если пин в режиме работы, 0 - если пин не работает
       return (bool)(pin_mode_l != now_pin_mode);
     }
@@ -230,10 +273,10 @@ class PinControl{
     //int over_pin_fill = 0;
     int priority = 10000; // любое число|с сайта|с мобильного приложения|с разбери|с датчиков или по времени|
 
+    // управление чем-либо с учётом приоритета
     void pin_write_priority(boolean pin_mod, int now_priority, bool save_priority){
       pin_write_priority(pin_mod, now_priority, save_priority, true);
     }
-    
     bool pin_write_priority(boolean pin_mod, int now_priority, bool save_priority, bool isworking){
       //now_priority = |номер ячейки в строке| значение этой ячейки|
       if (levle_priority(now_priority)){
@@ -245,7 +288,8 @@ class PinControl{
       }
       return false;
     }
-    
+
+    // включение или выключение чего-либо
     void pin_write(boolean pin_mod){
       //Serial.println("pin_write, if " +(String)now_pin_mode + " != " + (String)pin_mod);
       if (now_pin_mode != pin_mod){
@@ -255,6 +299,7 @@ class PinControl{
       }
     }
 
+    // вкличение чего-нибудь в режиме ШИМ (Широтно Импульсная Модуляция)
     void analog_write_pin(int filling){
       if (pin_filling != filling){
         pin_filling = filling;
@@ -270,13 +315,16 @@ class PinControl{
       pin_write(pin_mode_l);
     }
 
-    int levle_priority(int got_priority){
+    // true - если можно включить что-то
+    bool levle_priority(int got_priority){
       got_priority =  (int)pow(10, got_priority / 10) * got_priority % 10;
       if (priority % 10000 <= got_priority){
         return true;
       }
+      return false;
     }
 
+    // стандартное возмедение в степень работает криво, это его аналог
     int my_pow(int num, int _step){
       int new_num = 1;
       for (int i = 0; i < _step; ++i){
@@ -341,17 +389,17 @@ class AnalogReadPin{
       }
 
       int return_temperature(){
-        int data = (int)dht->readTemperature();
-        if (data != 0){
-          return data;
+        float data = dht->readTemperature();
+        if (!isnan(data)){
+          return (int)data;
         }
         return (int)-1;
       }
 
       int return_humid(){
-        int data = (int)dht->readHumidity();
-        if (data != 0){
-          return data;
+        float data = dht->readHumidity();
+        if (!isnan(data)){
+          return (int)data;
         }
         return (int)-1;
       }

@@ -1,7 +1,7 @@
-raspberry/.idea/
+app/.idea/
 kostil.jpg
 kostil2_1.jpg
 kostil2_2.jpg
-raspberry/venv/
+app/venv/
 .idea/
-raspberry/__pycache__/
+app/__pycache__/

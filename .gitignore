@@ -1,7 +1,4 @@
-app/.idea/
-kostil.jpg
-kostil2_1.jpg
-kostil2_2.jpg
-app/venv/
-.idea/
-app/__pycache__/
+*.jpg
+/**/venv/**/*
+/**/.idea/**/*
+/**/__pycache__/**/*

@@ -4,5 +4,5 @@ from src.rpi.arduino.main import ArduinoControl
 
 
 def add_handlers(app: FastAPI):
-    app.add_event_handler("startup", lambda : ArduinoControl())
+    app.add_event_handler("startup", lambda : ArduinoControl(name='Arduino'))
     return app

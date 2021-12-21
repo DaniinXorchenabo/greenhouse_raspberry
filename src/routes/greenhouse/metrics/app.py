@@ -24,13 +24,9 @@ async def websocket_chat(websocket: WebSocket):
         async def send_lambda():
             nonlocal websocket
             async for d in get_arduino_data.data_generator:
-                print(d)
-                await websocket.send_json({
-                    "temperature": round(random.random() * 50, 2),
-                    "humidity": round(random.random() * 50, 2),
-                    'test_': d,
-                })
-                await asyncio.sleep(1.5)
+                # print(d)
+                await websocket.send_json(d)
+                # await asyncio.sleep(1.5)
 
         async def lambda_receive():
             nonlocal websocket

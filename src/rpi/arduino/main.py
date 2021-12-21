@@ -4,6 +4,7 @@ from typing import Optional, Awaitable, AsyncGenerator, Type, Generator
 from datetime import datetime
 from time import time, sleep
 from abc import ABC
+import json
 
 from serial import Serial
 import serial.tools.list_ports
@@ -24,27 +25,21 @@ class OutputProtocol(asyncio.protocols.Protocol):
         transport.write(b'Hello, World!\n')  # Write serial data via transport
 
     def data_received(self, data: bytes):
-        # print('\tdata receiving\t:\t', repr(data))
         self.current_received_string += data
         if self.current_received_string.endswith(b'\r\n'):
             data = self.current_received_string
             print('data received:\t', repr(data))
-            data = data.replace(b'\r\n', b'').decode('utf-8')
+            data = data.replace(b'\r\n', b'')
+            try:
+                data = json.loads(data)
+            except Exception:
+                data = data.decode('utf-8')
             if self.send_data_to is not None:
                 self.send_data_to: Generator
                 old_data = self.send_data_to.send(data)
-                print('old_data', old_data)
             else:
                 print('Нет обработчика')
             self.current_received_string = b''
-            """
-            Делать какие-то действия с пришедшими данными
-            """
-
-
-        # if b'\r\n'  data:
-        #     self.current_received_string = b''
-        #     self.transport.close()
 
     def connection_lost(self, exc: Optional[Exception]):
         print('port closed')
@@ -83,10 +78,7 @@ class GetArduinoData(ABC):
     def get_params_from_arduino(cls):
         data = 0
         while True:
-            # await asyncio.sleep(1)
-            print("get_params_from_arduino 1:", data)
             new_data = yield data
-            print("get_params_from_arduino 2:", new_data)
             if new_data is not None:
                 data = new_data
                 [obj.put_in_queue(data) for obj in cls.all_objects]
@@ -126,16 +118,8 @@ class ArduinoControl(object):
             self._protocol.send_data_to = self.send_data_to
             return self._transport, self._protocol
 
-        async def _useless_lambda():
-            data = 0
-            while True:
-                await asyncio.sleep(1)
-                new_data = yield data
-                if new_data is not None:
-                    data = new_data
         next(self.send_data_to)
         self._connection_task = asyncio.create_task(_lambda())
-        # asyncio.create_task(_useless_lambda(), name='test_fantom_task')
 
     @property
     async def transport(self):
@@ -179,29 +163,3 @@ class ArduinoControl(object):
     @classmethod
     def close_all(cls) -> Awaitable:
         return asyncio.gather([i.close() for i in cls.all_objects])
-
-# class Test(object):
-#
-#     @property
-#     async def fff(self):
-#         # await asyncio.sleep(1)
-#         print(1)
-#         return 1001
-#
-#     async def test(self):
-#         r = time()
-#         d = self.fff
-#         asyncio.create_task(d)
-#
-#         print(time() - r)
-#         sleep(2)
-#         print(time() - r)
-#
-#
-#
-#
-# loop = asyncio.get_event_loop()
-# loop.run_until_complete(Test().test())
-# loop.close()
-
-# print(ArduinoControl.get_all_serial_ports())

@@ -39,7 +39,7 @@ html = """
         <ul id='messages'>
         </ul>
         <script>
-            var ws = new WebSocket("ws://%s:%s/tests/received_arduino");
+            var ws = new WebSocket("ws://%s:%s/metrics/sensors");
             ws.onmessage = function(event) {
                 var messages = document.getElementById('messages')
                 var message = document.createElement('li')

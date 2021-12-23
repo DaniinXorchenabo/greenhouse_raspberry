@@ -50,7 +50,7 @@ html = """
             <p><label>включить ли проветривание корней?: 
             <input id='root_fan' class='set' type='number' value='0'/></label></p>
             <p><label>Полить: 
-            <input id='water' class='action' type='number' value=''/></label></p>
+            <input id='water' class='action' type='number' value='0'/></label></p>
 
 
             <button>Send</button>

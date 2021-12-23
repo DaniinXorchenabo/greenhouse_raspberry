@@ -120,14 +120,15 @@ class ArduinoControl(object):
         self.__class__.all_objects_as_dict[name] = self
         self.port = self.get_all_serial_ports()
         self.send_data_to: Generator = GetArduinoData[self].get_params_from_arduino()
-        self.coro = serial_asyncio.create_serial_connection(
-            asyncio.get_running_loop(),
-            OutputProtocol,
-            self.port[0],
-            baudrate=self.speed,
-        )
-        self._transport: Optional[serial_asyncio.SerialTransport] = None
-        self._protocol: Optional[OutputProtocol] = None
+        if bool(self.port):
+            self.coro = serial_asyncio.create_serial_connection(
+                asyncio.get_running_loop(),
+                OutputProtocol,
+                self.port[0],
+                baudrate=self.speed,
+            )
+            self._transport: Optional[serial_asyncio.SerialTransport] = None
+            self._protocol: Optional[OutputProtocol] = None
 
         async def _lambda():
             self._transport, self._protocol = await self.coro
@@ -164,9 +165,10 @@ class ArduinoControl(object):
         protocol.connection_lost(None)
 
     async def send(self, text: str):
-        transport = await self.transport
-        transport.write(text.encode('utf-8') + b'\n')
-        await asyncio.sleep(0.1)
+        if bool(self.port):
+            transport = await self.transport
+            transport.write(text.encode('utf-8') + b'\n')
+            await asyncio.sleep(0.1)
         # transport.writelines()
 
     @classmethod

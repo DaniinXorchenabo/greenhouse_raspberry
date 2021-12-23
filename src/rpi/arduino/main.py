@@ -26,20 +26,36 @@ class OutputProtocol(asyncio.protocols.Protocol):
 
     def data_received(self, data: bytes):
         self.current_received_string += data
-        if self.current_received_string.endswith(b'\r\n'):
-            data = self.current_received_string
-            print('data received:\t', repr(data))
-            data = data.replace(b'\r\n', b'')
-            try:
-                data = json.loads(data)
-            except Exception:
-                data = data.decode('utf-8')
-            if self.send_data_to is not None:
-                self.send_data_to: Generator
-                old_data = self.send_data_to.send(data)
-            else:
-                print('Нет обработчика')
-            self.current_received_string = b''
+        # print(data,  b'\r\n' in self.current_received_string)
+        if b'\r\n' in self.current_received_string:
+            # print("**8888", (self.current_received_string + b' ').split(b'\r\n', 1))
+            data, *other = (self.current_received_string + b' ').split(b'\r\n', 1)
+            other: list[bytes]
+            # print(data, *other)
+            while bool(other):
+                other: bytes = other[0]
+                # print('data received:\t', repr(data))
+                data: bytes = data.replace(b'\r\n', b'')
+                try:
+                    data: dict = json.loads(data)
+                except Exception:
+                    try:
+                        data: str = data.decode('utf-8')
+                    except UnicodeDecodeError as e:
+                        data: str = str(data)
+                print('data received:\t', repr(data))
+                if self.send_data_to is not None:
+                    self.send_data_to: Generator
+                    old_data = self.send_data_to.send(data)
+                else:
+                    print('Нет обработчика')
+                data, *other = (other.removesuffix(b' ') + b' ').split(b'\r\n', 1)
+                other: list[bytes]
+                data: bytes
+            # print('$$$', data, other)
+            self.current_received_string = data.removesuffix(b' ')
+
+
 
     def connection_lost(self, exc: Optional[Exception]):
         print('port closed')
@@ -116,6 +132,8 @@ class ArduinoControl(object):
         async def _lambda():
             self._transport, self._protocol = await self.coro
             self._protocol.send_data_to = self.send_data_to
+            self._transport.set_write_buffer_limits(0, 1000)
+
             return self._transport, self._protocol
 
         next(self.send_data_to)
@@ -126,6 +144,8 @@ class ArduinoControl(object):
         if self._transport is None:
             self._transport, self._protocol = await self._connection_task
             self._protocol.send_data_to = self.send_data_to
+            self._transport.set_write_buffer_limits(0, 1000)
+
         self._transport: serial_asyncio.SerialTransport
         return self._transport
 
@@ -134,6 +154,8 @@ class ArduinoControl(object):
         if self._protocol is None:
             self._transport, self._protocol = await self._connection_task
             self._protocol.send_data_to = self.send_data_to
+            self._transport.set_write_buffer_limits(0, 1000)
+
         self._protocol: OutputProtocol
         return self._protocol
 
@@ -143,7 +165,9 @@ class ArduinoControl(object):
 
     async def send(self, text: str):
         transport = await self.transport
-        transport.write(text.encode('utf-8'))
+        transport.write(text.encode('utf-8') + b'\n')
+        await asyncio.sleep(0.1)
+        # transport.writelines()
 
     @classmethod
     def get_all_serial_ports(cls):

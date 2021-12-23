@@ -15,22 +15,24 @@ app_metrics = app
 
 
 class ActionsEnum(BaseModel):
-    water: Any = None
+    water: Optional[bool] = None
 
 
 class SetParamEnum(BaseModel):
     led: Optional[int] = Field(None, ge=0, le=100)
     reb_blue_led: Optional[int] = Field(None, ge=0, le=100)
-    humidity: Optional[int] = Field(None, ge=0, le=100)
-    root_humidity: Optional[int] = Field(None, ge=0, le=100)
     temperature: Optional[int] = Field(None, ge=-10, le=70)
     fan: Optional[bool] = None
     root_fan: Optional[bool] = None
+    humidity: Optional[int] = Field(None, ge=0, le=100)
+    root_humidity: Optional[int] = Field(None, ge=0, le=100)
 
+class GetArduinoRequest(BaseModel):
+    pass
 
 class InputAndroidData(BaseModel):
     set: Optional[SetParamEnum]
-    get: Optional[dict[str, Any]]
+    get: Optional[GetArduinoRequest]
     action: Optional[ActionsEnum]
 
 
@@ -52,10 +54,9 @@ async def websocket_chat(websocket: WebSocket):
         async def send_lambda():
             nonlocal websocket
             async for d in get_arduino_data.data_generator:
-                # print(d)
+                # print(type(d), d)
                 if isinstance(d, dict):
                     await websocket.send_json(d)
-                # await asyncio.sleep(1.5)
 
         async def lambda_receive():
             nonlocal websocket
@@ -64,8 +65,10 @@ async def websocket_chat(websocket: WebSocket):
                     answer = old_ans = await websocket.receive_json()
                     answer = InputAndroidData(**answer)
                     print("\n\n------------------\n", answer, old_ans, "\n------------\n")
-                    await arduino_controller.send(answer.json())
-                    # get_arduino_data
+                    [await arduino_controller.send(InputAndroidData(**{key: {key1: val1}}).json(exclude_unset=True, exclude_none=True, exclude_defaults=True))
+                     for key, val in answer.dict().items() if val is not None
+                     for key1, val1 in val.items()]
+
                 except json.decoder.JSONDecodeError as e:
                     print('сообщение не является json-ом', e)
                 except ValueError as e:

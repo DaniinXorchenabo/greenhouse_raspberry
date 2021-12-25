@@ -73,6 +73,8 @@ async def websocket_chat(websocket: WebSocket):
                     print('сообщение не является json-ом', e)
                 except ValueError as e:
                     print('кажется, ошибка в раскодировании данных', e)
+                except Exception as e:
+                    print('неопознанная ошибка', e)
 
         await asyncio.gather(send_lambda(), lambda_receive())
 
